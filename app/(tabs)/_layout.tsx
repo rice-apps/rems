@@ -30,6 +30,13 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
         }}
       />
+      <Tabs.Screen
+        name="dosage-calc"
+        options={{
+          title: 'Dosage Calculator',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="square" color={color} />,
+        }}
+      />
     </Tabs>
   );
 }
