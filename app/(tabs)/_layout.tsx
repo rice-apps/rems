@@ -35,6 +35,14 @@ export default function TabLayout() {
           tabBarButton: (props) => <HapticTab {...props} />,
         }}
       />
+      <Tabs.Screen
+        name="MapsPage"
+        options={{
+          title: 'Maps',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="map.fill" color={color} />,
+          tabBarButton: (props) => <HapticTab {...props} />,
+        }}
+      />
     </Tabs>
   );
 }
