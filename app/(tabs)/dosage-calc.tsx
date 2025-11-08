@@ -5,6 +5,8 @@ import {
   TextInput,
   Button,
   StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   Switch,
 } from "react-native";
@@ -30,6 +32,12 @@ export default function Index() {
     { label: "Loratadine (Claritin)", value: "claritin" },
   ]);
 
+  type Item = {
+    label: string;
+    value: string;
+    disabled?: boolean;
+  };
+
   // Age Group dropdown
   const [ageGroupOpen, setAgeGroupOpen] = useState(false);
   const [ageGroup, setAgeGroup] = useState<string | null>(null);
@@ -41,16 +49,18 @@ export default function Index() {
   //Route of Administration Dropdown
   const [routeOpen, setRouteOpen] = useState(false);
   const [route, setRoute] = useState<string | null>(null);
-  const [routeItems, setRouteItems] = useState([
-    { label: "Anaphylaxis", value: "anaphylaxis" },
-    { label: "Cardiac arrest", value: "cardiac arrest" },
-    { label: "Refractory anaphylaxis", value: "refractory anaphylaxis" },
-    { label: "IV/IO", value: "iv/io" },
-    { label: "Refractory anaphylaxis", value: "refractory anaphylaxis" },
+  const [routeItems, setRouteItems] = useState<Item[]>([
+    { label: "Please select drug", value: "", disabled: true },
   ]);
   const [weight, setWeight] = useState("");
   const [isLbs, setIsLbs] = useState(false);
   const [dosage, setDosage] = useState("");
+
+  React.useEffect(() => {
+    if (weight) {
+      calculateDosage();
+    }
+  }, [weight, value, route, ageGroup, isLbs]);
 
   const makeAdminister = () => {
     let administrationMethod = [{ label: "", value: "" }];
@@ -129,17 +139,17 @@ export default function Index() {
   };
 
   const calculateDosage = () => {
-    if (!ageGroup) {
-      setDosage("Please select an age group.");
-      return;
-    }
+    //if (!ageGroup) {
+    //setDosage("Please select an age group.");
+    //return;
+    //}
 
     let weightNum = parseFloat(weight);
 
-    if (isNaN(weightNum)) {
-      setDosage("Please enter a valid weight.");
-      return;
-    }
+    //if (isNaN(weightNum) || weightNum <= 0) {
+    //setDosage("Please enter a valid weight.");
+    //return;
+    //}
 
     // Convert weight to kilograms if the unit is pounds
     if (isLbs) {
@@ -371,87 +381,149 @@ export default function Index() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Dosage Calculator</Text>
-
-      <DropDownPicker
-        searchable={true}
-        open={open}
-        value={value}
-        items={items}
-        setOpen={setOpen}
-        zIndex={3000}
-        zIndexInverse={1000}
-        setValue={setValue}
-        setItems={setItems}
-        onChangeValue={makeAdminister}
-        placeholder="Select Drug"
-        listMode="SCROLLVIEW"
-        style={[styles.dropdown, { marginBottom: 20 }]}
-      />
-
-      <Text style={styles.label}>Age Group:</Text>
-      <DropDownPicker
-        open={ageGroupOpen}
-        value={ageGroup}
-        items={ageGroupItems}
-        setOpen={setAgeGroupOpen}
-        setValue={setAgeGroup}
-        setItems={setAgeGroupItems}
-        zIndex={2000}
-        zIndexInverse={2000}
-        placeholder="Select Age Group"
-        listMode="SCROLLVIEW"
-        style={[styles.dropdown, { marginBottom: 20 }]}
-      />
-
-      <View style={styles.weightContainer}>
-        <Text style={styles.label}>Weight (kgs):</Text>
-        <View style={styles.switchContainer}>
-          <Text style={styles.switchLabel}>lbs</Text>
-          <Switch value={isLbs} onValueChange={setIsLbs} />
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={{ alignItems: "center", width: "100%" }}
+      >
+        <View style={styles.result}>
+          <View style={styles.white}>
+            <Text>Hello</Text>
+          </View>
+          <Text style={styles.title}>Dosage Calculator</Text>
+          <Text style={styles.dosageText}>{dosage || "XXX"}</Text>
         </View>
-      </View>
-      <TextInput
-        style={styles.input}
-        placeholder={`Enter weight in ${isLbs ? "lbs" : "kg"}`}
-        placeholderTextColor="#0a0a0a"
-        keyboardType="numeric"
-        value={weight}
-        onChangeText={setWeight}
-      />
+        <View style={styles.border}>
+          <Text style={styles.label}>Drug Administered</Text>
+          <DropDownPicker
+            searchable={true}
+            open={open}
+            value={value}
+            items={items}
+            setOpen={setOpen}
+            zIndex={3000}
+            zIndexInverse={1000}
+            setValue={setValue}
+            setItems={setItems}
+            onChangeValue={(value) => {
+              makeAdminister();
+              calculateDosage();
+            }}
+            placeholder=""
+            listMode="SCROLLVIEW"
+            style={[styles.dropdown, { marginBottom: 20 }]}
+            textStyle={{ color: "#133465", fontWeight: "bold" }}
+          />
 
-      <Text style={styles.label}>Route of Administration:</Text>
-      <DropDownPicker
-        searchable={true}
-        open={routeOpen}
-        value={route}
-        items={routeItems}
-        setOpen={setRouteOpen}
-        setValue={setRoute}
-        setItems={setRouteItems}
-        zIndex={1000}
-        zIndexInverse={3000}
-        placeholder="Select Route of Administration"
-        listMode="SCROLLVIEW"
-        style={[styles.dropdown, { marginBottom: 20 }]}
-      />
+          <Text style={styles.label}>Route of Administration:</Text>
+          <DropDownPicker
+            searchable={true}
+            open={routeOpen}
+            value={route}
+            items={routeItems}
+            setOpen={setRouteOpen}
+            setValue={setRoute}
+            setItems={setRouteItems}
+            zIndex={2000}
+            zIndexInverse={3000}
+            onChangeValue={calculateDosage}
+            placeholder=""
+            listMode="SCROLLVIEW"
+            style={[styles.dropdown]}
+            textStyle={{ color: "#133465", fontWeight: "bold" }}
+          />
 
-      <View style={{ marginTop: 20 }}>
-        <Button title="Calculate" onPress={calculateDosage} />
-      </View>
+          <Text style={styles.label}>Weight</Text>
+          <View style={styles.weightInputContainer}>
+            <TextInput
+              style={styles.weightInput}
+              placeholder=""
+              //placeholderTextColor="#003686"
+              keyboardType="numeric"
+              value={weight}
+              onChangeText={(text) => {
+                setWeight(text);
+              }}
+            />
+            <View style={styles.toggleContainerInside}>
+              <Text
+                style={[
+                  styles.toggleButton,
+                  isLbs && styles.toggleButtonActive,
+                ]}
+                onPress={() => setIsLbs(true)}
+              >
+                lb
+              </Text>
+              <Text
+                style={[
+                  styles.toggleButton,
+                  !isLbs && styles.toggleButtonActive,
+                ]}
+                onPress={() => setIsLbs(false)}
+              >
+                kg
+              </Text>
+            </View>
+          </View>
 
-      {dosage ? <Text style={styles.result}>Dosage: {dosage}</Text> : null}
+          <Text style={styles.label}>Age Group:</Text>
+          <DropDownPicker
+            open={ageGroupOpen}
+            value={ageGroup}
+            items={ageGroupItems}
+            setOpen={setAgeGroupOpen}
+            setValue={setAgeGroup}
+            setItems={setAgeGroupItems}
+            zIndex={1000}
+            zIndexInverse={2000}
+            onChangeValue={calculateDosage}
+            placeholder=""
+            listMode="SCROLLVIEW"
+            style={[styles.dropdown, { marginBottom: 20 }]}
+            textStyle={{ color: "#133465", fontWeight: "bold" }}
+          />
+        </View>
+      </KeyboardAvoidingView>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  weightContainer: {
+  weightInputContainer: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
     width: "100%",
-    marginBottom: 10,
+    height: 55,
+    borderRadius: 8,
+    padding: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e0e0e0",
+    marginBottom: 20,
+  },
+  weightInput: {
+    flex: 1,
+    fontSize: 16,
+    color: "#133465",
+    fontWeight: "bold",
+  },
+  toggleContainerInside: {
+    flexDirection: "row",
+    backgroundColor: "#e0e0e0",
+    borderRadius: 20,
+    padding: 4,
+  },
+  toggleButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+    borderRadius: 16,
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#666",
+  },
+  toggleButtonActive: {
+    backgroundColor: "#fff",
+    color: "#003686",
+    fontWeight: "600",
   },
   switchContainer: {
     flexDirection: "row",
@@ -465,29 +537,29 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: "center",
     alignItems: "center",
-    padding: 10,
-    backgroundColor: "#fff",
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 30,
+
+    backgroundColor: "white",
+    overflow: "visible",
   },
   label: {
-    fontSize: 18,
+    fontSize: 16,
     alignSelf: "flex-start",
     marginLeft: 10,
     marginBottom: 5,
+    color: "#989898",
   },
   dropdown: {
     width: "100%",
     height: 55,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: "#ccc",
     borderRadius: 8,
     padding: 10,
     marginBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e0e0e0",
   },
+
   input: {
     width: "100%",
     borderWidth: 1,
@@ -499,8 +571,59 @@ const styles = StyleSheet.create({
   },
 
   result: {
-    marginTop: 30,
-    fontSize: 18,
-    fontWeight: "500",
+    width: "100%",
+    minHeight: 200,
+    backgroundColor: "white",
+    padding: 70,
+    borderRadius: 30,
+    marginBottom: 30,
+    justifyContent: "flex-end",
+    textAlign: "center",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+    alignSelf: "stretch",
+    overflow: "visible",
+  },
+
+  title: {
+    fontSize: 15,
+    marginBottom: 10,
+    textAlign: "center",
+    backgroundColor: "white",
+  },
+  dosageText: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#003686",
+    backgroundColor: "white",
+    textAlign: "center",
+  },
+
+  avoid: {
+    justifyContent: "center",
+    overflow: "visible",
+  },
+
+  temp: {
+    justifyContent: "center",
+  },
+
+  border: {
+    padding: 12,
+  },
+
+  white: {
+    backgroundColor: "white",
+    position: "absolute",
+    top: -130,
+    left: -50,
+    width: 1000,
+    height: 200,
   },
 });
