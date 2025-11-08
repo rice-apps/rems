@@ -1,5 +1,3 @@
-//
-
 import { Image } from 'expo-image';
 import { ScrollView, StyleSheet, Modal, Pressable } from 'react-native';
 import { useLocalSearchParams, Stack } from 'expo-router';

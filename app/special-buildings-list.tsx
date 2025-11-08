@@ -13,35 +13,12 @@ export default function MapsPage() {
     { id: '5', name: 'Reckling Park'},
     { id: '6', name: 'Tudor Fieldhouse'},
   ];
-  const colleges = [
-    { id: '7', name: 'Baker College'},
-    { id: '8', name: 'Brown College'},
-    { id: '9', name: 'Duncan College'},
-    { id: '10', name: 'Hanszen College'},
-    { id: '11', name: 'Jones College'},
-    { id: '12', name: 'Lovett College'},
-    { id: '13', name: 'Martel College'},
-    { id: '14', name: 'McMurtry College'},
-    { id: '15', name: 'Sid Richardson College'},
-    { id: '16', name: 'Wiess College'},
-    { id: '17', name: 'Will Rice College'},
-  ];
-
-  const locations = [...special_locations, ...colleges];
 
   const handleLocationPress = (item: { id: string; name: string }) => {
-    if (parseInt(item.id) <= 6) {
-        router.push({
-            pathname: '/special-maps-details',
-            params: { location: item.name }
-        });
-    } else {
-        router.push({
-            pathname: '/college-map-details',
-            params: { college: item.name }
-        });
-    }
-    
+    router.push({
+        pathname: '/special-maps-details',
+        params: { location: item.name }
+    });
   };
 
   return (

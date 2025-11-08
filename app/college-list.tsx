@@ -20,14 +20,6 @@ const COLLEGE_IMAGES: Record<string, any> = {
 };
 
 export default function MapsPage() {
-  const special_locations = [
-    { id: '1', name: 'Baker Institute'},
-    { id: '2', name: 'George R. Brown Tennis Center'},
-    { id: '3', name: 'Ley Track & Holloway Field'},
-    { id: '4', name: 'Rice Stadium'},
-    { id: '5', name: 'Reckling Park'},
-    { id: '6', name: 'Tudor Fieldhouse'},
-  ];
   const colleges = [
     { id: '7', name: 'Baker College'},
     { id: '8', name: 'Brown College'},
@@ -42,21 +34,11 @@ export default function MapsPage() {
     { id: '17', name: 'Will Rice College'},
   ];
 
-  const locations = [...special_locations, ...colleges];
-
   const handleLocationPress = (item: { id: string; name: string }) => {
-    if (parseInt(item.id) <= 6) {
-        router.push({
-            pathname: '/special-maps-details',
-            params: { location: item.name }
-        });
-    } else {
-        router.push({
-            pathname: '/college-map-details',
-            params: { college: item.name }
-        });
-    }
-    
+      router.push({
+          pathname: '/college-map-details',
+          params: { college: item.name }
+      });
   };
 
   return (
