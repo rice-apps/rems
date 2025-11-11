@@ -4,6 +4,10 @@ __generated__
 web-build
 bare-apps
 
+# Protected files DO NOT DELETE
+assets/guidelines/
+assets/dbindex/
+
 # macOS
 .DS_Store
 
