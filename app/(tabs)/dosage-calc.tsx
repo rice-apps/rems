@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Animated,
 } from "react-native";
 
 import DropDownPicker from "react-native-dropdown-picker";
@@ -480,9 +481,18 @@ export default function Index() {
   // Weight input
   const [weight, setWeight] = useState("");
   const [isLbs, setIsLbs] = useState(false);
+  const [weightFocused, setWeightFocused] = useState(false);
 
   // Calculated result
   const [dosage, setDosage] = useState("");
+
+  // Animation values
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.8)).current;
+  const slideAnim = useRef(new Animated.Value(-20)).current;
+  const weightBorderAnim = useRef(new Animated.Value(0)).current;
+  const resultCardScale = useRef(new Animated.Value(1)).current;
+  const toggleSlideAnim = useRef(new Animated.Value(0)).current; // 0 for lbs, 1 for kg
 
   // Update routes when drug changes
   React.useEffect(() => {
@@ -517,19 +527,104 @@ export default function Index() {
     }
   }, [weight, selectedDrug, selectedRoute, ageGroup, isLbs]);
 
+  // Animate dosage result when it changes
+  useEffect(() => {
+    if (dosage && dosage !== "XXX") {
+      // Reset animations
+      fadeAnim.setValue(0);
+      scaleAnim.setValue(0.8);
+      slideAnim.setValue(-20);
+
+      // Run animations in parallel
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 400,
+          useNativeDriver: true,
+        }),
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          friction: 4,
+          tension: 40,
+          useNativeDriver: true,
+        }),
+        Animated.timing(slideAnim, {
+          toValue: 0,
+          duration: 400,
+          useNativeDriver: true,
+        }),
+      ]).start();
+
+      // Pulse the result card
+      Animated.sequence([
+        Animated.timing(resultCardScale, {
+          toValue: 1.02,
+          duration: 150,
+          useNativeDriver: true,
+        }),
+        Animated.timing(resultCardScale, {
+          toValue: 1,
+          duration: 150,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      // Reset to initial state if no dosage
+      fadeAnim.setValue(1);
+      scaleAnim.setValue(1);
+      slideAnim.setValue(0);
+    }
+  }, [dosage, fadeAnim, scaleAnim, slideAnim, resultCardScale]);
+
+  // Animate weight input border on focus
+  useEffect(() => {
+    Animated.timing(weightBorderAnim, {
+      toValue: weightFocused ? 1 : 0,
+      duration: 200,
+      useNativeDriver: false,
+    }).start();
+  }, [weightFocused, weightBorderAnim]);
+
+  // Animate lb/kg toggle with sliding animation
+  useEffect(() => {
+    Animated.spring(toggleSlideAnim, {
+      toValue: isLbs ? 0 : 1,
+      friction: 8,
+      tension: 100,
+      useNativeDriver: true,
+    }).start();
+  }, [isLbs, toggleSlideAnim]);
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ alignItems: "center", width: "100%" }}
       >
-        <View style={styles.result}>
+        <Animated.View
+          style={[
+            styles.result,
+            {
+              transform: [{ scale: resultCardScale }],
+            },
+          ]}
+        >
           <View style={styles.white}>
             <Text>Hello</Text>
           </View>
           <Text style={styles.title}>Dosage Calculator</Text>
-          <Text style={styles.dosageText}>{dosage || "XXX"}</Text>
-        </View>
+          <Animated.Text
+            style={[
+              styles.dosageText,
+              {
+                opacity: fadeAnim,
+                transform: [{ scale: scaleAnim }, { translateY: slideAnim }],
+              },
+            ]}
+          >
+            {dosage || "XXX"}
+          </Animated.Text>
+        </Animated.View>
 
         <View style={styles.border}>
           <Text style={styles.label}>Drug Administered</Text>
@@ -538,14 +633,19 @@ export default function Index() {
             open={drugOpen}
             value={selectedDrug}
             items={drugItems}
+            onOpen={() => {
+              setRouteOpen(false);
+              setAgeGroupOpen(false);
+            }}
             setOpen={setDrugOpen}
             setValue={setSelectedDrug}
             zIndex={3000}
             zIndexInverse={1000}
             placeholder=""
             listMode="SCROLLVIEW"
-            style={[styles.dropdown, { marginBottom: 20 }]}
+            style={styles.dropdown}
             textStyle={{ color: "#133465", fontWeight: "bold" }}
+            modalAnimationType="slide"
           />
 
           <Text style={styles.label}>Route of Administration:</Text>
@@ -554,26 +654,73 @@ export default function Index() {
             open={routeOpen}
             value={selectedRoute}
             items={routeItems}
+            onOpen={() => {
+              setDrugOpen(false);
+              setAgeGroupOpen(false);
+            }}
             setOpen={setRouteOpen}
             setValue={setSelectedRoute}
             zIndex={2000}
             zIndexInverse={3000}
             placeholder=""
             listMode="SCROLLVIEW"
-            style={[styles.dropdown]}
+            style={styles.dropdown}
             textStyle={{ color: "#133465", fontWeight: "bold" }}
+            modalAnimationType="slide"
+            disabled={!selectedDrug}
           />
 
           <Text style={styles.label}>Weight</Text>
-          <View style={styles.weightInputContainer}>
+          <Animated.View
+            style={[
+              styles.weightInputContainer,
+              {
+                borderBottomColor: weightBorderAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: ["#e0e0e0", "#003686"],
+                }),
+                borderBottomWidth: weightBorderAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [1, 2],
+                }),
+              },
+            ]}
+          >
             <TextInput
               style={styles.weightInput}
               placeholder=""
-              keyboardType="numeric"
+              keyboardType="decimal-pad"
               value={weight}
-              onChangeText={setWeight}
+              onFocus={() => setWeightFocused(true)}
+              onBlur={() => setWeightFocused(false)}
+              onChangeText={(text) => {
+                // Only allow numbers and decimal point
+                const numericValue = text.replace(/[^0-9.]/g, "");
+                // Prevent multiple decimal points
+                const parts = numericValue.split(".");
+                const validValue =
+                  parts.length > 2
+                    ? parts[0] + "." + parts.slice(1).join("")
+                    : numericValue;
+                setWeight(validValue);
+              }}
             />
             <View style={styles.toggleContainerInside}>
+              <Animated.View
+                style={[
+                  styles.toggleSlider,
+                  {
+                    transform: [
+                      {
+                        translateX: toggleSlideAnim.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [0, 52], // Width adjusted to match button size
+                        }),
+                      },
+                    ],
+                  },
+                ]}
+              />
               <Text
                 style={[
                   styles.toggleButton,
@@ -593,21 +740,26 @@ export default function Index() {
                 kg
               </Text>
             </View>
-          </View>
+          </Animated.View>
 
           <Text style={styles.label}>Age Group:</Text>
           <DropDownPicker
             open={ageGroupOpen}
             value={ageGroup}
             items={ageGroupItems}
+            onOpen={() => {
+              setDrugOpen(false);
+              setRouteOpen(false);
+            }}
             setOpen={setAgeGroupOpen}
             setValue={setAgeGroup}
             zIndex={1000}
             zIndexInverse={2000}
             placeholder=""
             listMode="SCROLLVIEW"
-            style={[styles.dropdown, { marginBottom: 20 }]}
+            style={styles.dropdown}
             textStyle={{ color: "#133465", fontWeight: "bold" }}
+            modalAnimationType="slide"
           />
         </View>
       </KeyboardAvoidingView>
@@ -637,18 +789,32 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     backgroundColor: "#e0e0e0",
     borderRadius: 20,
-    padding: 4,
+    padding: 3,
+    position: "relative",
+  },
+  toggleSlider: {
+    position: "absolute",
+    width: 52,
+    height: 32,
+    backgroundColor: "#fff",
+    borderRadius: 18,
+    left: 3,
+    top: 1,
   },
   toggleButton: {
-    paddingVertical: 6,
-    paddingHorizontal: 16,
-    borderRadius: 16,
+    paddingVertical: 8,
+    paddingHorizontal: 18,
+    borderRadius: 18,
     fontSize: 14,
+    lineHeight: 16,
     fontWeight: "500",
     color: "#666",
+    zIndex: 1,
+    width: 52,
+    textAlign: "center",
   },
   toggleButtonActive: {
-    backgroundColor: "#fff",
+    backgroundColor: "transparent",
     color: "#003686",
     fontWeight: "600",
   },
@@ -666,6 +832,19 @@ const styles = StyleSheet.create({
     marginBottom: 5,
     color: "#989898",
   },
+  pickerContainer: {
+    width: "100%",
+    height: 55,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e0e0e0",
+    marginBottom: 20,
+    justifyContent: "center",
+  },
+  picker: {
+    width: "100%",
+    height: 55,
+    color: "#133465",
+  },
   dropdown: {
     width: "100%",
     height: 55,
@@ -679,9 +858,8 @@ const styles = StyleSheet.create({
   },
   result: {
     width: "100%",
-    minHeight: 200,
     backgroundColor: "white",
-    padding: 70,
+    paddingBottom: 30,
     borderRadius: 30,
     marginBottom: 30,
     justifyContent: "flex-end",
