@@ -8,9 +8,11 @@ import {
   Platform,
   ScrollView,
   Animated,
+  Modal,
+  TouchableOpacity,
 } from "react-native";
 
-import DropDownPicker from "react-native-dropdown-picker";
+import { Picker } from "@react-native-picker/picker";
 
 // ============================================================================
 // DRUG CONFIGURATION DATA
@@ -454,8 +456,8 @@ function calculateDosage(
 
 export default function Index() {
   // Drug dropdown
-  const [drugOpen, setDrugOpen] = useState(false);
   const [selectedDrug, setSelectedDrug] = useState<string | null>(null);
+  const [showDrugPicker, setShowDrugPicker] = useState(false);
   const [drugItems] = useState(
     DRUG_DATABASE.map((drug) => ({
       label: drug.label,
@@ -464,15 +466,15 @@ export default function Index() {
   );
 
   // Route dropdown
-  const [routeOpen, setRouteOpen] = useState(false);
   const [selectedRoute, setSelectedRoute] = useState<string | null>(null);
+  const [showRoutePicker, setShowRoutePicker] = useState(false);
   const [routeItems, setRouteItems] = useState<RouteOption[]>([
     { label: "Please select drug", value: "" },
   ]);
 
   // Age group dropdown
-  const [ageGroupOpen, setAgeGroupOpen] = useState(false);
   const [ageGroup, setAgeGroup] = useState<string | null>(null);
+  const [showAgeGroupPicker, setShowAgeGroupPicker] = useState(false);
   const [ageGroupItems] = useState([
     { label: "Pediatric", value: "pediatric" },
     { label: "Adult", value: "adult" },
@@ -628,47 +630,107 @@ export default function Index() {
 
         <View style={styles.border}>
           <Text style={styles.label}>Drug Administered</Text>
-          <DropDownPicker
-            searchable={true}
-            open={drugOpen}
-            value={selectedDrug}
-            items={drugItems}
-            onOpen={() => {
-              setRouteOpen(false);
-              setAgeGroupOpen(false);
-            }}
-            setOpen={setDrugOpen}
-            setValue={setSelectedDrug}
-            zIndex={3000}
-            zIndexInverse={1000}
-            placeholder=""
-            listMode="SCROLLVIEW"
-            style={styles.dropdown}
-            textStyle={{ color: "#133465", fontWeight: "bold" }}
-            modalAnimationType="slide"
-          />
+          <TouchableOpacity
+            style={styles.pickerButton}
+            onPress={() => setShowDrugPicker(true)}
+          >
+            <Text style={styles.pickerButtonText}>
+              {selectedDrug
+                ? drugItems.find((d) => d.value === selectedDrug)?.label
+                : "Select a drug..."}
+            </Text>
+          </TouchableOpacity>
+
+          <Modal
+            visible={showDrugPicker}
+            transparent={true}
+            animationType="fade"
+          >
+            <View style={styles.modalContainer}>
+              <TouchableOpacity
+                style={styles.modalOverlay}
+                activeOpacity={1}
+                onPress={() => setShowDrugPicker(false)}
+              />
+              <View style={styles.modalContent}>
+                <View style={styles.modalHeader}>
+                  <TouchableOpacity onPress={() => setShowDrugPicker(false)}>
+                    <Text style={styles.modalDoneButton}>Done</Text>
+                  </TouchableOpacity>
+                </View>
+                <Picker
+                  selectedValue={selectedDrug}
+                  onValueChange={(itemValue) => setSelectedDrug(itemValue)}
+                  itemStyle={styles.pickerItem}
+                >
+                  <Picker.Item label="Select a drug..." value={null} />
+                  {drugItems.map((drug) => (
+                    <Picker.Item
+                      key={drug.value}
+                      label={drug.label}
+                      value={drug.value}
+                    />
+                  ))}
+                </Picker>
+              </View>
+            </View>
+          </Modal>
 
           <Text style={styles.label}>Route of Administration:</Text>
-          <DropDownPicker
-            searchable={true}
-            open={routeOpen}
-            value={selectedRoute}
-            items={routeItems}
-            onOpen={() => {
-              setDrugOpen(false);
-              setAgeGroupOpen(false);
-            }}
-            setOpen={setRouteOpen}
-            setValue={setSelectedRoute}
-            zIndex={2000}
-            zIndexInverse={3000}
-            placeholder=""
-            listMode="SCROLLVIEW"
-            style={styles.dropdown}
-            textStyle={{ color: "#133465", fontWeight: "bold" }}
-            modalAnimationType="slide"
+          <TouchableOpacity
+            style={[
+              styles.pickerButton,
+              !selectedDrug && styles.pickerButtonDisabled,
+            ]}
+            onPress={() => selectedDrug && setShowRoutePicker(true)}
             disabled={!selectedDrug}
-          />
+          >
+            <Text
+              style={[
+                styles.pickerButtonText,
+                !selectedDrug && styles.pickerButtonTextDisabled,
+              ]}
+            >
+              {selectedRoute
+                ? routeItems.find((r) => r.value === selectedRoute)?.label
+                : "Select a route..."}
+            </Text>
+          </TouchableOpacity>
+
+          <Modal
+            visible={showRoutePicker}
+            transparent={true}
+            animationType="fade"
+          >
+            <View style={styles.modalContainer}>
+              <TouchableOpacity
+                style={styles.modalOverlay}
+                activeOpacity={1}
+                onPress={() => setShowRoutePicker(false)}
+              />
+              <View style={styles.modalContent}>
+                <View style={styles.modalHeader}>
+                  <TouchableOpacity onPress={() => setShowRoutePicker(false)}>
+                    <Text style={styles.modalDoneButton}>Done</Text>
+                  </TouchableOpacity>
+                </View>
+                <Picker
+                  selectedValue={selectedRoute}
+                  onValueChange={(itemValue) => setSelectedRoute(itemValue)}
+                  itemStyle={styles.pickerItem}
+                >
+                  <Picker.Item label="Select a route..." value={null} />
+                  {routeItems.map((route) => (
+                    <Picker.Item
+                      key={route.value}
+                      label={route.label}
+                      value={route.value}
+                    />
+                  ))}
+                </Picker>
+              </View>
+            </View>
+          </Modal>
 
           <Text style={styles.label}>Weight</Text>
           <Animated.View
@@ -743,24 +805,53 @@ export default function Index() {
           </Animated.View>
 
           <Text style={styles.label}>Age Group:</Text>
-          <DropDownPicker
-            open={ageGroupOpen}
-            value={ageGroup}
-            items={ageGroupItems}
-            onOpen={() => {
-              setDrugOpen(false);
-              setRouteOpen(false);
-            }}
-            setOpen={setAgeGroupOpen}
-            setValue={setAgeGroup}
-            zIndex={1000}
-            zIndexInverse={2000}
-            placeholder=""
-            listMode="SCROLLVIEW"
-            style={styles.dropdown}
-            textStyle={{ color: "#133465", fontWeight: "bold" }}
-            modalAnimationType="slide"
-          />
+          <TouchableOpacity
+            style={styles.pickerButton}
+            onPress={() => setShowAgeGroupPicker(true)}
+          >
+            <Text style={styles.pickerButtonText}>
+              {ageGroup
+                ? ageGroupItems.find((g) => g.value === ageGroup)?.label
+                : "Select age group..."}
+            </Text>
+          </TouchableOpacity>
+
+          <Modal
+            visible={showAgeGroupPicker}
+            transparent={true}
+            animationType="fade"
+          >
+            <View style={styles.modalContainer}>
+              <TouchableOpacity
+                style={styles.modalOverlay}
+                activeOpacity={1}
+                onPress={() => setShowAgeGroupPicker(false)}
+              />
+              <View style={styles.modalContent}>
+                <View style={styles.modalHeader}>
+                  <TouchableOpacity
+                    onPress={() => setShowAgeGroupPicker(false)}
+                  >
+                    <Text style={styles.modalDoneButton}>Done</Text>
+                  </TouchableOpacity>
+                </View>
+                <Picker
+                  selectedValue={ageGroup}
+                  onValueChange={(itemValue) => setAgeGroup(itemValue)}
+                  itemStyle={styles.pickerItem}
+                >
+                  <Picker.Item label="Select age group..." value={null} />
+                  {ageGroupItems.map((group) => (
+                    <Picker.Item
+                      key={group.value}
+                      label={group.label}
+                      value={group.value}
+                    />
+                  ))}
+                </Picker>
+              </View>
+            </View>
+          </Modal>
         </View>
       </KeyboardAvoidingView>
     </ScrollView>
@@ -845,16 +936,59 @@ const styles = StyleSheet.create({
     height: 55,
     color: "#133465",
   },
-  dropdown: {
-    width: "100%",
+  pickerItem: {
+    height: 120,
+    color: "#133465",
+    fontWeight: "bold",
+  },
+  pickerButton: {
     height: 55,
-    borderWidth: 0,
-    borderColor: "#ccc",
-    borderRadius: 8,
-    padding: 10,
-    marginBottom: 20,
     borderBottomWidth: 1,
     borderBottomColor: "#e0e0e0",
+    marginBottom: 20,
+    justifyContent: "center",
+    paddingHorizontal: 10,
+  },
+  pickerButtonText: {
+    fontSize: 16,
+    color: "#133465",
+    fontWeight: "bold",
+  },
+  pickerButtonDisabled: {
+    opacity: 0.5,
+  },
+  pickerButtonTextDisabled: {
+    color: "#999",
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: "flex-end",
+  },
+  modalOverlay: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+  },
+  modalContent: {
+    backgroundColor: "white",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingBottom: 40,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e0e0e0",
+  },
+  modalDoneButton: {
+    fontSize: 17,
+    color: "#007AFF",
+    fontWeight: "600",
   },
   result: {
     width: "100%",
