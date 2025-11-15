@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef } from "react";
 import {
   View,
   StyleSheet,
@@ -9,8 +9,8 @@ import {
   ActivityIndicator,
   Dimensions,
   Platform,
-} from 'react-native';
-import Pdf, { PdfRef } from 'react-native-pdf';
+} from "react-native";
+import Pdf, { PdfRef } from "react-native-pdf";
 
 interface SearchResult {
   page: number;
@@ -19,23 +19,18 @@ interface SearchResult {
 }
 
 export default function SearchScreen() {
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
-  const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const pdfRef = useRef<PdfRef>(null);
 
   const source = Platform.select({
-    ios: require('../../assets/guidelines/guidelines.pdf'),
-    android: { uri: 'bundle-assets://guidelines.pdf' },
+    ios: require("../../assets/guidelines/guidelines.pdf"),
+    android: { uri: "bundle-assets://guidelines.pdf" },
   });
 
   const handleLoadComplete = (numberOfPages: number) => {
     console.log(`PDF loaded with ${numberOfPages} pages`);
-  };
-
-  const handlePageChanged = (page: number) => {
-    setCurrentPage(page);
   };
 
   const handleSearch = async () => {
@@ -56,12 +51,12 @@ export default function SearchScreen() {
       {
         page: 5,
         relevance: 0.8,
-        section: "Head injury"
+        section: "Head injury",
       },
       {
         page: 12,
         relevance: 0.6,
-        section: "Another section"
+        section: "Another section",
       },
     ];
 
@@ -73,7 +68,7 @@ export default function SearchScreen() {
 
   const jumpToPage = (pageNumber: number) => {
     if (pdfRef.current) {
-      setCurrentPage(pageNumber);
+      pdfRef.current.setPage(pageNumber);
       // The page prop on the Pdf component will trigger navigation
     }
   };
@@ -90,10 +85,19 @@ export default function SearchScreen() {
         <View style={styles.resultContent}>
           <View style={styles.resultHeader}>
             <Text style={styles.sectionName}>{item.section}</Text>
-            <View style={[
-              styles.relevanceBadge,
-              { backgroundColor: item.relevance > 0.7 ? '#34C759' : item.relevance > 0.4 ? '#FF9500' : '#FF3B30' }
-            ]}>
+            <View
+              style={[
+                styles.relevanceBadge,
+                {
+                  backgroundColor:
+                    item.relevance > 0.7
+                      ? "#34C759"
+                      : item.relevance > 0.4
+                      ? "#FF9500"
+                      : "#FF3B30",
+                },
+              ]}
+            >
               <Text style={styles.relevanceText}>{relevancePercentage}%</Text>
             </View>
           </View>
@@ -128,7 +132,8 @@ export default function SearchScreen() {
       ) : searchResults.length > 0 ? (
         <View style={styles.resultsContainer}>
           <Text style={styles.resultsHeader}>
-            {searchResults.length} result{searchResults.length !== 1 ? 's' : ''} found
+            {searchResults.length} result{searchResults.length !== 1 ? "s" : ""}{" "}
+            found
           </Text>
           <FlatList
             data={searchResults}
@@ -144,19 +149,17 @@ export default function SearchScreen() {
         <Pdf
           ref={pdfRef}
           source={source}
-          page={currentPage}
           onLoadComplete={handleLoadComplete}
-          onPageChanged={handlePageChanged}
           onError={(error) => {
-            console.error('PDF Error:', error);
+            console.error("PDF Error:", error);
           }}
           style={styles.pdf}
-          trustAllCerts={false}
+          trustAllCerts={true}
           enablePaging={true}
           horizontal={false}
           // These props allow for better search/navigation experience
           spacing={10}
-          fitPolicy={0} // 0: fit width, 1: fit height, 2: fit both
+          fitPolicy={1} // 0: fit width, 1: fit height, 2: fit both
         />
       </View>
     </View>
@@ -166,50 +169,50 @@ export default function SearchScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: "#f5f5f5",
   },
   searchContainer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     padding: 10,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-    paddingTop: Platform.OS === 'ios' ? 50 : 10,
+    borderBottomColor: "#e0e0e0",
+    paddingTop: Platform.OS === "ios" ? 50 : 10,
   },
   searchInput: {
     flex: 1,
     height: 40,
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: "#ccc",
     borderRadius: 8,
     paddingHorizontal: 12,
     marginRight: 8,
-    backgroundColor: '#f9f9f9',
+    backgroundColor: "#f9f9f9",
   },
   searchButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: "#007AFF",
     paddingHorizontal: 20,
-    justifyContent: 'center',
+    justifyContent: "center",
     borderRadius: 8,
   },
   searchButtonText: {
-    color: '#fff',
-    fontWeight: '600',
+    color: "#fff",
+    fontWeight: "600",
   },
   resultsContainer: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     maxHeight: 200,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: "#e0e0e0",
   },
   resultsHeader: {
     padding: 10,
     fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-    backgroundColor: '#f9f9f9',
+    fontWeight: "600",
+    color: "#333",
+    backgroundColor: "#f9f9f9",
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: "#e0e0e0",
   },
   resultsList: {
     flex: 1,
@@ -217,22 +220,22 @@ const styles = StyleSheet.create({
   resultItem: {
     padding: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: "#f0f0f0",
   },
   resultContent: {
     flex: 1,
   },
   resultHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 6,
   },
   sectionName: {
     flex: 1,
     fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
+    fontWeight: "600",
+    color: "#333",
     marginRight: 8,
   },
   relevanceBadge: {
@@ -242,24 +245,23 @@ const styles = StyleSheet.create({
   },
   relevanceText: {
     fontSize: 12,
-    fontWeight: '700',
-    color: '#fff',
+    fontWeight: "700",
+    color: "#fff",
   },
   pageNumber: {
     fontSize: 13,
-    fontWeight: '500',
-    color: '#007AFF',
+    fontWeight: "500",
+    color: "#007AFF",
   },
   loadingContainer: {
     padding: 20,
-    alignItems: 'center',
-    backgroundColor: '#fff',
+    alignItems: "center",
+    backgroundColor: "#fff",
   },
   pdfContainer: {
     flex: 1,
   },
   pdf: {
     flex: 1,
-    width: Dimensions.get('window').width,
   },
 });
