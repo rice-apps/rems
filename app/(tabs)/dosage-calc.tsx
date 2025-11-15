@@ -3,381 +3,519 @@ import {
   View,
   Text,
   TextInput,
-  Button,
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Switch,
 } from "react-native";
 
 import DropDownPicker from "react-native-dropdown-picker";
 
+// ============================================================================
+// DRUG CONFIGURATION DATA
+// ============================================================================
+
+interface RouteOption {
+  label: string;
+  value: string;
+}
+
+interface DosageConfig {
+  pediatric?: {
+    formula?: (weight: number) => number;
+    max?: number;
+    unit?: string;
+    notes?: string;
+    fixedDose?: string;
+  };
+  adult?: {
+    formula?: (weight: number) => number;
+    max?: number;
+    unit?: string;
+    notes?: string;
+    fixedDose?: string;
+  };
+}
+
+interface DrugConfig {
+  label: string;
+  value: string;
+  routes: RouteOption[];
+  dosages: {
+    [routeValue: string]: DosageConfig;
+  };
+}
+
+const DRUG_DATABASE: DrugConfig[] = [
+  {
+    label: "Epinephrine",
+    value: "epinephrine",
+    routes: [
+      { label: "Anaphylaxis (IM)", value: "im" },
+      { label: "Cardiac arrest (IV/IO)", value: "iv_io" },
+    ],
+    dosages: {
+      im: {
+        pediatric: {
+          formula: (weight) => weight * 0.01,
+          max: 0.5,
+          unit: "mg",
+          notes: "EMT alternative: Epi-Pen Jr 0.15 mg.",
+        },
+        adult: {
+          formula: (weight) => weight * 0.01,
+          max: 0.5,
+          unit: "mg",
+          notes:
+            "at AEMT/Paramedic level; consider re-dose q ~3–15 minutes. Or, 0.3 mg (EMT with medical command)",
+        },
+      },
+      iv_io: {
+        pediatric: {
+          formula: (weight) => weight * 0.01,
+          max: 1,
+          unit: "mg",
+          notes: "every 3-5 minutes while pulseless",
+        },
+        adult: {
+          fixedDose: "1 mg every 3-5 minutes while pulseless",
+        },
+      },
+    },
+  },
+  {
+    label: "Amiodarone",
+    value: "amiodarone",
+    routes: [
+      {
+        label: "IV/IO push for arrest; infusion post-ROSC (ALS)",
+        value: "iv_io",
+      },
+    ],
+    dosages: {
+      iv_io: {
+        pediatric: {
+          formula: (weight) => weight * 5,
+          unit: "mg",
+        },
+        adult: {
+          fixedDose:
+            "300 mg IV/IO first dose, then 150 mg after 5 min. Post-ROSC: 150 mg IV/IO over 10 minutes.",
+        },
+      },
+    },
+  },
+  {
+    label: "Calcium Chloride",
+    value: "calcium_chloride",
+    routes: [{ label: "IV/IO", value: "iv_io" }],
+    dosages: {
+      iv_io: {
+        pediatric: {
+          formula: (weight) => weight * 10,
+          max: 1000,
+          unit: "mg",
+        },
+        adult: {
+          formula: (weight) => weight * 10,
+          max: 1000,
+          unit: "mg",
+        },
+      },
+    },
+  },
+  {
+    label: "Sodium Bicarbonate",
+    value: "sodium_bicarbonate",
+    routes: [{ label: "IV/IO", value: "iv_io" }],
+    dosages: {
+      iv_io: {
+        pediatric: {
+          formula: (weight) => weight * 1,
+          max: 50,
+          unit: "mEq",
+        },
+        adult: {
+          formula: (weight) => weight * 1,
+          max: 50,
+          unit: "mEq",
+        },
+      },
+    },
+  },
+  {
+    label: "Glucagon",
+    value: "glucagon",
+    routes: [
+      { label: "Hypoglycemia without access (IM)", value: "im" },
+      { label: "Beta-blocker overdose (ALS) (IV/IO)", value: "iv_io" },
+    ],
+    dosages: {
+      im: {
+        pediatric: {
+          fixedDose:
+            "0.5 mg (if weight < 25 kg). Beta-blocker overdose: 0.03 mg/kg IV/IO (max 1 mg)",
+        },
+        adult: {
+          fixedDose: "1 mg IM if no access. Beta-blocker overdose: 1 mg IV/IO",
+        },
+      },
+      iv_io: {
+        pediatric: {
+          formula: (weight) => weight * 0.03,
+          max: 1,
+          unit: "mg",
+        },
+        adult: {
+          fixedDose: "1 mg",
+        },
+      },
+    },
+  },
+  {
+    label: "Dextrose 10% (D10)",
+    value: "d10",
+    routes: [
+      {
+        label:
+          "IV/IO piggyback drip or extension set; macro drip, drip wide open until response",
+        value: "iv_io",
+      },
+    ],
+    dosages: {
+      iv_io: {
+        pediatric: {
+          formula: (weight) => 5 * weight,
+          max: 250,
+          unit: "mL",
+          notes: "Stop when BGL > 60 mg/dL and patient improves",
+        },
+        adult: {
+          formula: (weight) => 5 * weight,
+          max: 250,
+          unit: "mL",
+          notes: "Stop when BGL > 60 mg/dL and patient improves",
+        },
+      },
+    },
+  },
+  {
+    label: "Dextrose 25% (D25)",
+    value: "d25",
+    routes: [{ label: "slow IV/IO", value: "iv_io" }],
+    dosages: {
+      iv_io: {
+        pediatric: {
+          formula: (weight) => 2 * weight,
+          max: 100,
+          unit: "mL",
+          notes:
+            "max is 50-100 mL depending on page variant; commonly used for <25 kg.",
+        },
+        adult: {
+          formula: (weight) => 2 * weight,
+          max: 100,
+          unit: "mL",
+          notes: "alternative to D10/D50 when indicated.",
+        },
+      },
+    },
+  },
+  {
+    label: "Dextrose 50% (D50)",
+    value: "d50",
+    routes: [{ label: "slow IV/IO", value: "iv_io" }],
+    dosages: {
+      iv_io: {
+        pediatric: {
+          formula: (weight) => 1 * weight,
+          max: 50,
+          unit: "mL",
+          notes: "use caution",
+        },
+        adult: {
+          formula: (weight) => 1 * weight,
+          max: 50,
+          unit: "mL",
+        },
+      },
+    },
+  },
+  {
+    label: "Naloxone (Narcan)",
+    value: "narcan",
+    routes: [
+      {
+        label: "IVP/IOP/IM/IN; titrate to effective breathing",
+        value: "ivp_iop_im_in",
+      },
+    ],
+    dosages: {
+      ivp_iop_im_in: {
+        pediatric: {
+          formula: (weight) => 0.1 * weight,
+          max: 0.4,
+          unit: "mg",
+          notes: "repeat every 5 minutes to total 4mg",
+        },
+        adult: {
+          fixedDose:
+            "0.4 mg every 5 minutes to total 4mg. Consider 4 mg in single-use spray.",
+        },
+      },
+    },
+  },
+  {
+    label: "Albuterol",
+    value: "albuterol",
+    routes: [{ label: "Nebulized via SVN", value: "svn" }],
+    dosages: {
+      svn: {
+        pediatric: {
+          fixedDose:
+            "2.5 mg neb for wheeze in anaphylaxis. Repeat per medical control.",
+        },
+        adult: {
+          fixedDose:
+            "5 mg neb for wheeze in anaphylaxis. Repeat per medical control.",
+        },
+      },
+    },
+  },
+  {
+    label: "Diphenhydramine",
+    value: "diphenhydramine",
+    routes: [
+      { label: "IV", value: "iv" },
+      { label: "No IV access (IM)", value: "im" },
+    ],
+    dosages: {
+      iv: {
+        pediatric: {
+          fixedDose:
+            "Per protocol (weight-based not specified on extracted lines).",
+        },
+        adult: {
+          fixedDose: "50 mg IV (IM if needed).",
+        },
+      },
+      im: {
+        pediatric: {
+          fixedDose:
+            "Per protocol (weight-based not specified on extracted lines).",
+        },
+        adult: {
+          fixedDose: "50 mg IV (IM if needed).",
+        },
+      },
+    },
+  },
+  {
+    label: "Methylprednisolone",
+    value: "methylprednisolone",
+    routes: [{ label: "IV", value: "iv" }],
+    dosages: {
+      iv: {
+        pediatric: {
+          formula: (weight) => 1 * weight,
+          max: 125,
+          unit: "mg",
+        },
+        adult: {
+          formula: (weight) => 1 * weight,
+          max: 125,
+          unit: "mg",
+        },
+      },
+    },
+  },
+  {
+    label: "Loratadine (Claritin)",
+    value: "claritin",
+    routes: [{ label: "PO", value: "po" }],
+    dosages: {
+      po: {
+        pediatric: {
+          fixedDose:
+            "2-5 years: 5 mg PO; 0-6 years: 10 mg PO (acute allergic reaction).",
+        },
+        adult: {
+          fixedDose: "10 mg PO for acute urticaria/allergic reaction.",
+        },
+      },
+    },
+  },
+  {
+    label: "Aspirin",
+    value: "aspirin",
+    routes: [{ label: "PO", value: "po" }],
+    dosages: {
+      po: {
+        pediatric: {
+          fixedDose: "N/A",
+        },
+        adult: {
+          fixedDose: "324 mg",
+          notes: "Chewed when MI suspected",
+        },
+      },
+    },
+  },
+  {
+    label: "Oral Glucose",
+    value: "oral_glucose",
+    routes: [{ label: "PO", value: "po" }],
+    dosages: {
+      po: {
+        pediatric: {
+          fixedDose: "7.5g Oral Glucose PO",
+        },
+        adult: {
+          fixedDose: "15g Oral Glucose PO",
+        },
+      },
+    },
+  },
+  {
+    label: "Nitroglycerin",
+    value: "nitroglycerin",
+    routes: [{ label: "Sublingual", value: "sublingual" }],
+    dosages: {
+      sublingual: {
+        pediatric: {
+          fixedDose: "N/A",
+        },
+        adult: {
+          fixedDose:
+            "0.4 mg SL every 3–5 min if SBP > 100 mmHg. Place IV before 2nd dose; consider med command if age ≤ 40",
+        },
+      },
+    },
+  },
+];
+
+// ============================================================================
+// CALCULATION LOGIC
+// ============================================================================
+
+function calculateDosage(
+  drugValue: string | null,
+  routeValue: string | null,
+  ageGroup: string | null,
+  weightKg: number
+): string {
+  if (!drugValue || !routeValue || !ageGroup || !weightKg) {
+    return "";
+  }
+
+  const drug = DRUG_DATABASE.find((d) => d.value === drugValue);
+  if (!drug) return "";
+
+  const dosageConfig = drug.dosages[routeValue];
+  if (!dosageConfig) return "";
+
+  const config =
+    ageGroup === "pediatric" ? dosageConfig.pediatric : dosageConfig.adult;
+  if (!config) return "";
+
+  // Handle fixed dose
+  if (config.fixedDose) {
+    return config.fixedDose;
+  }
+
+  // Handle calculated dose
+  if (config.formula) {
+    let dose = config.formula(weightKg);
+
+    // Apply maximum if specified
+    if (config.max !== undefined && dose > config.max) {
+      dose = config.max;
+    }
+
+    dose = parseFloat(dose.toFixed(2));
+
+    let result = `${dose} ${config.unit || ""}`.trim();
+
+    // Add notes if specified
+    if (config.notes) {
+      result += `. ${config.notes}`;
+    }
+
+    return result;
+  }
+
+  return "";
+}
+
+// ============================================================================
+// MAIN COMPONENT
+// ============================================================================
+
 export default function Index() {
-  const [open, setOpen] = useState(false);
-  const [value, setValue] = useState<string | null>(null);
-  const [items, setItems] = useState([
-    { label: "Epinephrine", value: "epinephrine" },
-    { label: "Amiodarone", value: "amiodarone" },
-    { label: "Calcium Chloride", value: "calcium chloride" },
-    { label: "sodium bicarbonate", value: "sodium bicarbonate" },
-    { label: "glucagon", value: "glucagon" },
-    { label: "Dextrose 10% (D10)", value: "d10" },
-    { label: "Dextrose 25% (D25)", value: "d25" },
-    { label: "Dextrose 50% (D50)", value: "d50" },
-    { label: "Naloxone (Narcan)", value: "narcan" },
-    { label: "Albuterol", value: "albuterol" },
-    { label: "Diphenhydramine", value: "diphenhydramine" },
-    { label: "Methylprednisolone", value: "methylprednisolone" },
-    { label: "Loratadine (Claritin)", value: "claritin" },
+  // Drug dropdown
+  const [drugOpen, setDrugOpen] = useState(false);
+  const [selectedDrug, setSelectedDrug] = useState<string | null>(null);
+  const [drugItems] = useState(
+    DRUG_DATABASE.map((drug) => ({
+      label: drug.label,
+      value: drug.value,
+    }))
+  );
+
+  // Route dropdown
+  const [routeOpen, setRouteOpen] = useState(false);
+  const [selectedRoute, setSelectedRoute] = useState<string | null>(null);
+  const [routeItems, setRouteItems] = useState<RouteOption[]>([
+    { label: "Please select drug", value: "" },
   ]);
 
-  type Item = {
-    label: string;
-    value: string;
-    disabled?: boolean;
-  };
-
-  // Age Group dropdown
+  // Age group dropdown
   const [ageGroupOpen, setAgeGroupOpen] = useState(false);
   const [ageGroup, setAgeGroup] = useState<string | null>(null);
-  const [ageGroupItems, setAgeGroupItems] = useState([
+  const [ageGroupItems] = useState([
     { label: "Pediatric", value: "pediatric" },
     { label: "Adult", value: "adult" },
   ]);
 
-  //Route of Administration Dropdown
-  const [routeOpen, setRouteOpen] = useState(false);
-  const [route, setRoute] = useState<string | null>(null);
-  const [routeItems, setRouteItems] = useState<Item[]>([
-    { label: "Please select drug", value: "", disabled: true },
-  ]);
+  // Weight input
   const [weight, setWeight] = useState("");
   const [isLbs, setIsLbs] = useState(false);
+
+  // Calculated result
   const [dosage, setDosage] = useState("");
 
+  // Update routes when drug changes
   React.useEffect(() => {
-    if (weight) {
-      calculateDosage();
+    if (selectedDrug) {
+      const drug = DRUG_DATABASE.find((d) => d.value === selectedDrug);
+      if (drug) {
+        setRouteItems(drug.routes);
+        setSelectedRoute(null); // Reset route when drug changes
+      }
     }
-  }, [weight, value, route, ageGroup, isLbs]);
+  }, [selectedDrug]);
 
-  const makeAdminister = () => {
-    let administrationMethod = [{ label: "", value: "" }];
-    switch (value) {
-      case "epinephrine":
-        administrationMethod = [
-          { label: "Anaphylaxis (IM)", value: "im_epinephrine" },
-          { label: "Cardiac arrest (IV/IO)", value: "iv/io_ephinephrine" },
-        ];
-        break;
-      case "amiodarone":
-        administrationMethod = [
-          {
-            label: "IV/IO push for arrest; infusion post-ROSC (ALS)",
-            value: "iv/io_amoidarone",
-          },
-        ];
-        break;
-      case "calcium chloride":
-      case "sodium bicarbonate":
-        administrationMethod = [
-          { label: "IV/IO", value: "iv/io_calciumchloridesodiumbicarbonate" },
-        ];
-        break;
-      case "glucagon":
-        administrationMethod = [
-          { label: "Hypoglecemia without access (IM)", value: "im_glucagon" },
-          {
-            label: "beta-blocker overdose (ALS) (IV/IO)",
-            value: "iv/io_glucagon",
-          },
-        ];
-        break;
-      case "d10":
-        administrationMethod = [
-          {
-            label:
-              "IV/IO piggyback drip or extension set; macro drip, drip wide open until response",
-            value: "iv/io_d10",
-          },
-        ];
-        break;
-      case "d25":
-      case "d50":
-        administrationMethod = [{ label: "slow IV/IO", value: "iv/io_d25d50" }];
-        break;
-      case "narcan":
-        administrationMethod = [
-          {
-            label: "IVP/IOP/IM/IN; titrate to effective breathing",
-            value: "ivp/iop/im/in_narcan",
-          },
-        ];
-        break;
-      case "albuterol":
-        administrationMethod = [
-          { label: "Nebulized via SVN", value: "svn_albuterol" },
-        ];
-        break;
-      case "diphenhydramine":
-        administrationMethod = [
-          { label: "IV", value: "iv_diphenhydramine" },
-          { label: "no IV access (IM)", value: "im_diphenhydramine" },
-        ];
-        break;
-      case "methylprednisolone":
-        administrationMethod = [
-          { label: "IV", value: "iv_methylprednisolone" },
-        ];
-        break;
-      case "claritin":
-        administrationMethod = [{ label: "PO", value: "po_calaritin" }];
-        break;
+  // Recalculate dosage when inputs change
+  React.useEffect(() => {
+    if (weight && selectedDrug && selectedRoute && ageGroup) {
+      let weightNum = parseFloat(weight);
+
+      // Convert pounds to kilograms
+      if (isLbs) {
+        weightNum = weightNum * 0.45359237;
+      }
+
+      const result = calculateDosage(
+        selectedDrug,
+        selectedRoute,
+        ageGroup,
+        weightNum
+      );
+      setDosage(result);
+    } else {
+      setDosage("");
     }
-    setRouteItems(administrationMethod);
-  };
-
-  const calculateDosage = () => {
-    //if (!ageGroup) {
-    //setDosage("Please select an age group.");
-    //return;
-    //}
-
-    let weightNum = parseFloat(weight);
-
-    //if (isNaN(weightNum) || weightNum <= 0) {
-    //setDosage("Please enter a valid weight.");
-    //return;
-    //}
-
-    // Convert weight to kilograms if the unit is pounds
-    if (isLbs) {
-      weightNum = weightNum * 0.45359237;
-    }
-
-    let result = "";
-    console.log("value:", value, "route:", route, "weightNum:", weightNum);
-    switch (ageGroup) {
-      case "pediatric":
-        switch (value) {
-          case "epinephrine":
-            switch (route) {
-              case "im_epinephrine":
-                let temp = weightNum * 0.01;
-                if (temp > 0.5) {
-                  temp = 0.5;
-                }
-                result = temp.toString() + "mg";
-                result += " EMT alternative: Epi-Pen Jr 0.15 mg.";
-                break;
-              case "iv/io_ephinephrine":
-                let temp1 = weightNum * 0.01;
-                if (temp1 > 1) {
-                  temp1 = 1;
-                }
-                result = temp1.toString() + "mg";
-                result = result + " every 3-5 minutes while pulseless";
-                break;
-            }
-            break;
-          case "amiodarone":
-            let temp2 = weightNum * 5;
-            result = temp2.toString() + "mg";
-            break;
-          case "calcium chloride":
-            let temp3 = weightNum * 10;
-            if (temp3 > 1000) {
-              temp3 = 1000;
-            }
-            result = temp3.toString() + "mg";
-            break;
-          case "sodium bicarbonate":
-            let temp4 = weightNum * 1;
-            if (temp4 > 50) {
-              temp4 = 50;
-            }
-            result = temp4.toString() + "mEq";
-            break;
-          case "glucagon":
-            //NOT SURE ABOUT THESE
-            switch (route) {
-              case "im_glucagon":
-                if (weightNum < 25) {
-                  result = (0.5).toString() + "mg";
-                } else {
-                  result = "error: not seen on spreadsheet";
-                }
-                break;
-              case "iv/io_glucagon":
-                let temp5 = weightNum * 0.03;
-                if (temp5 > 1) {
-                  temp5 = 1;
-                }
-                result = temp5 + "mg";
-                break;
-            }
-            break;
-          case "d10":
-            let temp6 = 5 * weightNum;
-            if (temp6 > 250) {
-              temp6 = 250;
-            }
-            result = temp6.toString() + "mL";
-            result += ". Stop when BGL > 60 mg/dL and patient improves";
-            break;
-          case "d25":
-            let temp7 = 2 * weightNum;
-            if (temp7 > 100) {
-              temp7 = 100;
-            }
-            result = temp7.toString() + "mL";
-
-            break;
-          case "d50":
-            let temp8 = 1 * weightNum;
-            if (temp8 > 50) {
-              temp8 = 50;
-            }
-            result = temp8.toString() + "mL";
-
-            break;
-          case "narcan":
-            let temp9 = 0.1 * weightNum;
-            if (temp9 > 0.4) {
-              temp9 = 0.4;
-            }
-            result = temp9.toString() + "mg";
-            result += " every 5 minutes to total 4mg";
-            break;
-          case "albuterol":
-            result =
-              "5 mg neb for wheeze in anaphylaxis; repeat per medical control.";
-            break;
-          case "diphenhydramine":
-            switch (route) {
-              case "iv_diphenhydramine":
-                result =
-                  "Per protocol (weight-based not specified on extracted lines).";
-                break;
-              case "im_diphenhydramine":
-                result =
-                  "Per protocol (weight-based not specified on extracted lines).";
-                break;
-            }
-            break;
-          case "methylprednisolone":
-            let temp10 = 1 * weightNum;
-            if (temp10 > 125) {
-              temp10 = 125;
-            }
-            result = temp10.toString() + "mg";
-            break;
-          case "loratadine":
-            result =
-              "2-5 years: 5 mg PO; 0-6 years: 10 mg PO (acute allergic reaction).";
-            break;
-        }
-        break;
-
-      case "adult":
-        switch (value) {
-          case "epinephrine":
-            //NOT SURE ABOUT THESE
-            switch (route) {
-              case "im_epinephrine":
-                let temp11 = 0.01 * weightNum;
-                if (temp11 > 0.5) {
-                  temp11 = 0.5;
-                }
-                result = temp11 + "mg";
-                result +=
-                  " at AEMT/Paramedic level; consider re-dose q ~3–15 minutes. Or, 0.3 mg (EMT with medical command)";
-                break;
-              case "iv/io_ephinephrine":
-                result = "1 mg every 3-5 minutes while pulseless";
-            }
-          case "amiodarone":
-            result =
-              "300 mg IV/IO first dose, then 150 mg after 5 min. Post-ROSC: 150 mg IV/IO over 10 minutes.";
-          case "calcium chloride":
-            let temp12 = weightNum * 10;
-            if (temp12 > 1000) {
-              temp12 = 1000;
-            }
-            result = temp12.toString() + "mg";
-            break;
-          case "sodium bicarbonate":
-            let temp13 = weightNum * 1;
-            if (temp13 > 50) {
-              temp13 = 50;
-            }
-            result = temp13.toString() + "mEq";
-            break;
-          case "glucagon":
-            switch (route) {
-              case "im_glucagon":
-                result = "1mg IM if no access";
-                break;
-              case "iv/io_glucagon":
-                result = "1 mg";
-                break;
-            }
-          case "d10":
-            let temp14 = 5 * weightNum;
-            if (temp14 > 250) {
-              temp14 = 250;
-            }
-            result = temp14.toString() + "mL";
-            result += ". Stop when BGL > 60 mg/dL and patient improves";
-            break;
-          case "d25":
-            let temp15 = 2 * weightNum;
-            if (temp15 > 100) {
-              temp15 = 100;
-            }
-            result = temp15.toString() + "mL";
-            break;
-          case "d50":
-            let temp16 = 1 * weightNum;
-            if (temp16 > 50) {
-              temp16 = 50;
-            }
-            result = temp16.toString() + "mL";
-
-            break;
-          case "narcan":
-            result =
-              "0.4 mg every 5 minutes to total 4mg. Consider 4 mg in single-use spray.";
-            break;
-          case "albuterol":
-            result =
-              "5 mg neb for wheeze in anaphylaxis; repeat per medical control.";
-            break;
-          case "diphenhydramine":
-            switch (route) {
-              case "iv_diphenhydramine":
-                //equation for diphenhydraine, IV
-                break;
-              case "im_diphenhydramine":
-                //equation for diphenhydraine, IM
-                break;
-            }
-            break;
-          case "methylprednisolone":
-            let temp = 1 * weightNum;
-            if (temp > 125) {
-              temp = 125;
-            }
-            result = temp.toString() + "mg";
-            break;
-          case "loratadine":
-            result = "10 mg PO for acute urticaria/allergic reaction.";
-            break;
-        }
-    }
-    setDosage(result);
-  };
+  }, [weight, selectedDrug, selectedRoute, ageGroup, isLbs]);
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -392,22 +530,18 @@ export default function Index() {
           <Text style={styles.title}>Dosage Calculator</Text>
           <Text style={styles.dosageText}>{dosage || "XXX"}</Text>
         </View>
+
         <View style={styles.border}>
           <Text style={styles.label}>Drug Administered</Text>
           <DropDownPicker
             searchable={true}
-            open={open}
-            value={value}
-            items={items}
-            setOpen={setOpen}
+            open={drugOpen}
+            value={selectedDrug}
+            items={drugItems}
+            setOpen={setDrugOpen}
+            setValue={setSelectedDrug}
             zIndex={3000}
             zIndexInverse={1000}
-            setValue={setValue}
-            setItems={setItems}
-            onChangeValue={(value) => {
-              makeAdminister();
-              calculateDosage();
-            }}
             placeholder=""
             listMode="SCROLLVIEW"
             style={[styles.dropdown, { marginBottom: 20 }]}
@@ -418,14 +552,12 @@ export default function Index() {
           <DropDownPicker
             searchable={true}
             open={routeOpen}
-            value={route}
+            value={selectedRoute}
             items={routeItems}
             setOpen={setRouteOpen}
-            setValue={setRoute}
-            setItems={setRouteItems}
+            setValue={setSelectedRoute}
             zIndex={2000}
             zIndexInverse={3000}
-            onChangeValue={calculateDosage}
             placeholder=""
             listMode="SCROLLVIEW"
             style={[styles.dropdown]}
@@ -437,12 +569,9 @@ export default function Index() {
             <TextInput
               style={styles.weightInput}
               placeholder=""
-              //placeholderTextColor="#003686"
               keyboardType="numeric"
               value={weight}
-              onChangeText={(text) => {
-                setWeight(text);
-              }}
+              onChangeText={setWeight}
             />
             <View style={styles.toggleContainerInside}>
               <Text
@@ -473,10 +602,8 @@ export default function Index() {
             items={ageGroupItems}
             setOpen={setAgeGroupOpen}
             setValue={setAgeGroup}
-            setItems={setAgeGroupItems}
             zIndex={1000}
             zIndexInverse={2000}
-            onChangeValue={calculateDosage}
             placeholder=""
             listMode="SCROLLVIEW"
             style={[styles.dropdown, { marginBottom: 20 }]}
@@ -525,19 +652,10 @@ const styles = StyleSheet.create({
     color: "#003686",
     fontWeight: "600",
   },
-  switchContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  switchLabel: {
-    fontSize: 16,
-    marginRight: 5,
-  },
   container: {
     flexGrow: 1,
     justifyContent: "center",
     alignItems: "center",
-
     backgroundColor: "white",
     overflow: "visible",
   },
@@ -559,17 +677,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#e0e0e0",
   },
-
-  input: {
-    width: "100%",
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
-    padding: 15,
-    height: 55,
-    marginBottom: 20,
-  },
-
   result: {
     width: "100%",
     minHeight: 200,
@@ -590,7 +697,6 @@ const styles = StyleSheet.create({
     alignSelf: "stretch",
     overflow: "visible",
   },
-
   title: {
     fontSize: 15,
     marginBottom: 10,
@@ -604,20 +710,9 @@ const styles = StyleSheet.create({
     backgroundColor: "white",
     textAlign: "center",
   },
-
-  avoid: {
-    justifyContent: "center",
-    overflow: "visible",
-  },
-
-  temp: {
-    justifyContent: "center",
-  },
-
   border: {
     padding: 12,
   },
-
   white: {
     backgroundColor: "white",
     position: "absolute",
