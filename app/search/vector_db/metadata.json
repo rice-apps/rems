@@ -1,0 +1,6 @@
+{
+  "dimension": 384,
+  "numElements": 696,
+  "space": "cosine",
+  "modelName": "Xenova/all-MiniLM-L6-v2"
+}
