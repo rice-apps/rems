@@ -12,6 +12,7 @@ import {
   Modal,
 } from "react-native";
 import Pdf, { PdfRef } from "react-native-pdf";
+import { Ionicons } from "@expo/vector-icons";
 import { SemanticSearchEngine } from "../search/semanticSearch";
 
 interface SearchResult {
@@ -172,7 +173,12 @@ export default function SearchScreen() {
       <View style={styles.searchHeader}>
         <View style={styles.searchInputContainer}>
           <View style={styles.searchInputWrapper}>
-            <Text style={styles.searchIcon}>🔍</Text>
+            <Ionicons
+              name="search"
+              size={20}
+              color="#666"
+              style={styles.searchIcon}
+            />
             <TextInput
               style={styles.searchInput}
               placeholder="Search medical guidelines..."
@@ -225,6 +231,7 @@ export default function SearchScreen() {
           trustAllCerts={false}
           enablePaging={false}
           horizontal={false}
+          enableDoubleTapZoom={true}
           spacing={10}
           fitPolicy={2}
           minScale={1.0}
@@ -310,7 +317,6 @@ const styles = StyleSheet.create({
     borderColor: "#e0e0e0",
   },
   searchIcon: {
-    fontSize: 18,
     marginRight: 8,
   },
   searchInput: {
