@@ -28,10 +28,10 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="explore"
+        name="dosage-calc"
         options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+          title: 'Dosage',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="pills.fill" color={color} />,
           tabBarButton: (props) => <HapticTab {...props} />,
         }}
       />
@@ -40,6 +40,14 @@ export default function TabLayout() {
         options={{
           title: 'Maps',
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="map.fill" color={color} />,
+          tabBarButton: (props) => <HapticTab {...props} />,
+        }}
+      />
+      <Tabs.Screen
+        name="Search"
+        options={{
+          title: 'Search',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="magnifyingglass" color={color} />,
           tabBarButton: (props) => <HapticTab {...props} />,
         }}
       />
