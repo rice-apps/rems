@@ -9,9 +9,10 @@ import {
   ActivityIndicator,
   Dimensions,
   Platform,
+  Modal,
 } from 'react-native';
 import Pdf, { PdfRef } from 'react-native-pdf';
-import { SemanticSearchEngine, SearchResult as SemanticSearchResult } from '../search/semanticSearch';
+import { SemanticSearchEngine } from '../search/semanticSearch';
 
 interface SearchResult {
   page: number;
@@ -23,10 +24,12 @@ interface SearchResult {
 
 export default function SearchScreen() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [lastSearchQuery, setLastSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [searchEngineReady, setSearchEngineReady] = useState(false);
+  const [showResultsModal, setShowResultsModal] = useState(false);
   const pdfRef = useRef<PdfRef>(null);
   const searchEngineRef = useRef<SemanticSearchEngine | null>(null);
 
@@ -58,7 +61,17 @@ export default function SearchScreen() {
     setCurrentPage(page);
   };
 
-  const handleSearch = async () => {
+  const hasSearchChanged = searchQuery.trim() !== lastSearchQuery;
+  const hasExistingResults = searchResults.length > 0 && !hasSearchChanged;
+
+  const handleSearchOrShowResults = async () => {
+    if (hasExistingResults) {
+      // Show existing results
+      setShowResultsModal(true);
+      return;
+    }
+
+    // Perform new search
     if (!searchQuery.trim()) {
       setSearchResults([]);
       return;
@@ -72,7 +85,7 @@ export default function SearchScreen() {
     setIsLoading(true);
 
     try {
-      const semanticResults = await searchEngineRef.current.search(searchQuery, 10);
+      const semanticResults = await searchEngineRef.current.search(searchQuery, 15);
 
       const formattedResults: SearchResult[] = semanticResults.map(result => ({
         page: result.metadata.pageNumber || 1,
@@ -83,6 +96,8 @@ export default function SearchScreen() {
       }));
 
       setSearchResults(formattedResults);
+      setLastSearchQuery(searchQuery.trim());
+      setShowResultsModal(true);
     } catch (error) {
       console.error('Search error:', error);
       setSearchResults([]);
@@ -92,80 +107,108 @@ export default function SearchScreen() {
   };
 
   const jumpToPage = (pageNumber: number) => {
+    // Close modal
+    setShowResultsModal(false);
+
+    // Update current page state
+    setCurrentPage(pageNumber);
+
+    // Force PDF to navigate to the page using ref
     if (pdfRef.current) {
-      setCurrentPage(pageNumber);
-      // The page prop on the Pdf component will trigger navigation
+      // Small delay to ensure PDF is visible before navigation
+      setTimeout(() => {
+        pdfRef.current?.setPage(pageNumber);
+      }, 100);
     }
   };
 
   const renderSearchResult = ({ item }: { item: SearchResult }) => {
-    // Convert relevance to percentage for display
-    const relevancePercentage = Math.round(item.relevance * 100);
+    const isHighRelevance = item.relevance > 0.7;
+    const isMediumRelevance = item.relevance > 0.5;
 
     return (
-      <TouchableOpacity
-        style={styles.resultItem}
-        onPress={() => jumpToPage(item.page)}
+      <View
+        style={[
+          styles.resultCard,
+          isHighRelevance && styles.resultCardHighRelevance,
+          isMediumRelevance && !isHighRelevance && styles.resultCardMediumRelevance,
+        ]}
       >
-        <View style={styles.resultContent}>
-          <View style={styles.resultHeader}>
-            <Text style={styles.sectionName} numberOfLines={1}>
-              {item.title || item.section}
+        <View style={styles.resultTitleSection}>
+          {item.title ? (
+            <Text style={styles.resultTitle} numberOfLines={2}>
+              {item.title}
             </Text>
-            <View style={[
-              styles.relevanceBadge,
-              { backgroundColor: item.relevance > 0.7 ? '#34C759' : item.relevance > 0.4 ? '#FF9500' : '#FF3B30' }
-            ]}>
-              <Text style={styles.relevanceText}>{relevancePercentage}%</Text>
-            </View>
-          </View>
-          <Text style={styles.previewText} numberOfLines={2}>
-            {item.text}
-          </Text>
-          <Text style={styles.pageNumber}>Page {item.page}</Text>
+          ) : (
+            <Text style={styles.resultSection} numberOfLines={2}>
+              {item.section}
+            </Text>
+          )}
         </View>
-      </TouchableOpacity>
+
+        <Text style={styles.resultPreview} numberOfLines={3}>
+          {item.text}
+        </Text>
+
+        <TouchableOpacity
+          style={styles.pageButton}
+          onPress={() => jumpToPage(item.page)}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.pageButtonText}>Page {item.page}</Text>
+          <Text style={styles.pageButtonArrow}>→</Text>
+        </TouchableOpacity>
+      </View>
     );
   };
 
   return (
     <View style={styles.container}>
       {/* Search Bar */}
-      <View style={styles.searchContainer}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search in guidelines..."
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          onSubmitEditing={handleSearch}
-          returnKeyType="search"
-        />
-        <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
-          <Text style={styles.searchButtonText}>Search</Text>
-        </TouchableOpacity>
+      <View style={styles.searchHeader}>
+        <View style={styles.searchInputContainer}>
+          <View style={styles.searchInputWrapper}>
+            <Text style={styles.searchIcon}>🔍</Text>
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search medical guidelines..."
+              placeholderTextColor="#999"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              onSubmitEditing={handleSearchOrShowResults}
+              returnKeyType="search"
+            />
+          </View>
+          <TouchableOpacity
+            style={[
+              styles.searchButton,
+              !searchEngineReady && styles.searchButtonDisabled,
+            ]}
+            onPress={handleSearchOrShowResults}
+            disabled={!searchEngineReady}
+          >
+            {isLoading ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text style={styles.searchButtonText}>
+                {hasExistingResults ? 'Results' : 'Search'}
+              </Text>
+            )}
+          </TouchableOpacity>
+        </View>
+
+        {!searchEngineReady && (
+          <View style={styles.initializingBanner}>
+            <ActivityIndicator size="small" color="#007AFF" />
+            <Text style={styles.initializingText}>
+              Initializing search engine...
+            </Text>
+          </View>
+        )}
       </View>
 
-      {/* Search Results */}
-      {isLoading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#007AFF" />
-        </View>
-      ) : searchResults.length > 0 ? (
-        <View style={styles.resultsContainer}>
-          <Text style={styles.resultsHeader}>
-            {searchResults.length} result{searchResults.length !== 1 ? 's' : ''} found
-          </Text>
-          <FlatList
-            data={searchResults}
-            renderItem={renderSearchResult}
-            keyExtractor={(item, index) => `${item.page}-${index}`}
-            style={styles.resultsList}
-          />
-        </View>
-      ) : null}
-
       {/* PDF Viewer */}
-      <View style={styles.pdfContainer}>
+      <View style={styles.pdfView}>
         <Pdf
           ref={pdfRef}
           source={source}
@@ -179,11 +222,58 @@ export default function SearchScreen() {
           trustAllCerts={false}
           enablePaging={true}
           horizontal={false}
-          // These props allow for better search/navigation experience
           spacing={10}
-          fitPolicy={0} // 0: fit width, 1: fit height, 2: fit both
+          fitPolicy={0}
         />
+        <View style={styles.pageIndicator}>
+          <Text style={styles.pageIndicatorText}>Page {currentPage}</Text>
+        </View>
       </View>
+
+      {/* Results Modal */}
+      <Modal
+        visible={showResultsModal}
+        animationType="slide"
+        onRequestClose={() => setShowResultsModal(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => setShowResultsModal(false)}
+            >
+              <Text style={styles.backButtonText}>← Back</Text>
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>Search Results</Text>
+            <View style={styles.backButtonPlaceholder} />
+          </View>
+
+          <View style={styles.resultsView}>
+            {searchResults.length > 0 ? (
+              <>
+                <View style={styles.resultsHeader}>
+                  <Text style={styles.resultsHeaderSubtitle}>
+                    Tap to view in document
+                  </Text>
+                </View>
+                <FlatList
+                  data={searchResults}
+                  renderItem={renderSearchResult}
+                  keyExtractor={(item, index) => `${item.page}-${index}`}
+                  contentContainerStyle={styles.resultsList}
+                  showsVerticalScrollIndicator={true}
+                />
+              </>
+            ) : (
+              <View style={styles.noResultsContainer}>
+                <Text style={styles.noResultsText}>
+                  No results found for &quot;{lastSearchQuery}&quot;
+                </Text>
+              </View>
+            )}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -191,106 +281,218 @@ export default function SearchScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#f8f9fa',
   },
-  searchContainer: {
-    flexDirection: 'row',
-    padding: 10,
+  searchHeader: {
     backgroundColor: '#fff',
+    paddingTop: Platform.OS === 'ios' ? 50 : 10,
+    paddingHorizontal: 16,
+    paddingBottom: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
-    paddingTop: Platform.OS === 'ios' ? 50 : 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  searchInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  searchInputWrapper: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  searchIcon: {
+    fontSize: 18,
+    marginRight: 8,
   },
   searchInput: {
     flex: 1,
-    height: 40,
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    marginRight: 8,
-    backgroundColor: '#f9f9f9',
+    height: 48,
+    fontSize: 16,
+    backgroundColor: 'transparent',
   },
   searchButton: {
+    paddingHorizontal: 24,
+    height: 48,
     backgroundColor: '#007AFF',
-    paddingHorizontal: 20,
+    borderRadius: 12,
     justifyContent: 'center',
-    borderRadius: 8,
+    alignItems: 'center',
+    minWidth: 100,
+  },
+  searchButtonDisabled: {
+    backgroundColor: '#ccc',
   },
   searchButtonText: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-  resultsContainer: {
-    backgroundColor: '#fff',
-    maxHeight: 200,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  resultsHeader: {
-    padding: 10,
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-    backgroundColor: '#f9f9f9',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  resultsList: {
-    flex: 1,
-  },
-  resultItem: {
-    padding: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  resultContent: {
-    flex: 1,
-  },
-  resultHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  sectionName: {
-    flex: 1,
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
-    marginRight: 8,
-  },
-  previewText: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 6,
-    lineHeight: 20,
-  },
-  relevanceBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  relevanceText: {
-    fontSize: 12,
-    fontWeight: '700',
     color: '#fff',
   },
-  pageNumber: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: '#007AFF',
-  },
-  loadingContainer: {
-    padding: 20,
+  initializingBanner: {
+    flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: '#fff3cd',
+    padding: 8,
+    borderRadius: 8,
+    marginTop: 8,
   },
-  pdfContainer: {
+  initializingText: {
+    marginLeft: 8,
+    fontSize: 13,
+    color: '#856404',
+  },
+  pdfView: {
     flex: 1,
   },
   pdf: {
     flex: 1,
     width: Dimensions.get('window').width,
+  },
+  pageIndicator: {
+    position: 'absolute',
+    bottom: 20,
+    right: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  pageIndicatorText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: '#f8f9fa',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#fff',
+    paddingTop: Platform.OS === 'ios' ? 50 : 10,
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  backButton: {
+    padding: 8,
+  },
+  backButtonText: {
+    fontSize: 16,
+    color: '#007AFF',
+    fontWeight: '600',
+  },
+  backButtonPlaceholder: {
+    width: 60,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#333',
+  },
+  resultsView: {
+    flex: 1,
+    backgroundColor: '#f8f9fa',
+  },
+  resultsHeader: {
+    backgroundColor: '#fff',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  resultsHeaderSubtitle: {
+    fontSize: 14,
+    color: '#666',
+  },
+  resultsList: {
+    padding: 16,
+  },
+  resultCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 2,
+    borderColor: '#e0e0e0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  resultCardHighRelevance: {
+    borderColor: '#34C759',
+    backgroundColor: '#f8fff9',
+  },
+  resultCardMediumRelevance: {
+    borderColor: '#FF9500',
+    backgroundColor: '#fffaf5',
+  },
+  resultTitleSection: {
+    marginBottom: 8,
+  },
+  resultTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#333',
+    lineHeight: 22,
+  },
+  resultSection: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#555',
+    lineHeight: 21,
+  },
+  resultPreview: {
+    fontSize: 14,
+    color: '#666',
+    lineHeight: 20,
+    marginBottom: 12,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  pageButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#007AFF',
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 12,
+  },
+  pageButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  pageButtonArrow: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  noResultsContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  noResultsText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
   },
 });

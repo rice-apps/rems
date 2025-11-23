@@ -239,7 +239,7 @@ export class SemanticSearchEngine {
         });
       }
     }
-    console.log(results);
+    
     return results;
   }
 
