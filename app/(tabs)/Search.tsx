@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -11,11 +11,14 @@ import {
   Platform,
 } from 'react-native';
 import Pdf, { PdfRef } from 'react-native-pdf';
+import { SemanticSearchEngine, SearchResult as SemanticSearchResult } from '../search/semanticSearch';
 
 interface SearchResult {
   page: number;
   relevance: number;
   section: string;
+  text: string;
+  title?: string;
 }
 
 export default function SearchScreen() {
@@ -23,7 +26,24 @@ export default function SearchScreen() {
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
+  const [searchEngineReady, setSearchEngineReady] = useState(false);
   const pdfRef = useRef<PdfRef>(null);
+  const searchEngineRef = useRef<SemanticSearchEngine | null>(null);
+
+  useEffect(() => {
+    const initializeSearchEngine = async () => {
+      try {
+        searchEngineRef.current = new SemanticSearchEngine();
+        await searchEngineRef.current.initialize();
+        setSearchEngineReady(true);
+        console.log('Semantic search engine initialized');
+      } catch (error) {
+        console.error('Failed to initialize search engine:', error);
+      }
+    };
+
+    initializeSearchEngine();
+  }, []);
 
   const source = Platform.select({
     ios: require('../../assets/guidelines/guidelines.pdf'),
@@ -44,31 +64,31 @@ export default function SearchScreen() {
       return;
     }
 
+    if (!searchEngineRef.current) {
+      console.warn('Search engine not initialized yet');
+      return;
+    }
+
     setIsLoading(true);
 
-    // TODO: Implement actual PDF text extraction and search
-    // For now, this is a placeholder structure
-    // You'll need to integrate a PDF text extraction library
-    // or implement server-side search
+    try {
+      const semanticResults = await searchEngineRef.current.search(searchQuery, 10);
 
-    // Mock search results for demonstration
-    const mockResults: SearchResult[] = [
-      {
-        page: 5,
-        relevance: 0.8,
-        section: "Head injury"
-      },
-      {
-        page: 12,
-        relevance: 0.6,
-        section: "Another section"
-      },
-    ];
+      const formattedResults: SearchResult[] = semanticResults.map(result => ({
+        page: result.metadata.pageNumber || 1,
+        relevance: result.score,
+        section: result.metadata.title || result.text.substring(0, 100),
+        text: result.text,
+        title: result.metadata.title,
+      }));
 
-    setTimeout(() => {
-      setSearchResults(mockResults);
+      setSearchResults(formattedResults);
+    } catch (error) {
+      console.error('Search error:', error);
+      setSearchResults([]);
+    } finally {
       setIsLoading(false);
-    }, 500);
+    }
   };
 
   const jumpToPage = (pageNumber: number) => {
@@ -89,7 +109,9 @@ export default function SearchScreen() {
       >
         <View style={styles.resultContent}>
           <View style={styles.resultHeader}>
-            <Text style={styles.sectionName}>{item.section}</Text>
+            <Text style={styles.sectionName} numberOfLines={1}>
+              {item.title || item.section}
+            </Text>
             <View style={[
               styles.relevanceBadge,
               { backgroundColor: item.relevance > 0.7 ? '#34C759' : item.relevance > 0.4 ? '#FF9500' : '#FF3B30' }
@@ -97,6 +119,9 @@ export default function SearchScreen() {
               <Text style={styles.relevanceText}>{relevancePercentage}%</Text>
             </View>
           </View>
+          <Text style={styles.previewText} numberOfLines={2}>
+            {item.text}
+          </Text>
           <Text style={styles.pageNumber}>Page {item.page}</Text>
         </View>
       </TouchableOpacity>
@@ -234,6 +259,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#333',
     marginRight: 8,
+  },
+  previewText: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 6,
+    lineHeight: 20,
   },
   relevanceBadge: {
     paddingHorizontal: 8,

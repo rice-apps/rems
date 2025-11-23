@@ -4,9 +4,7 @@
  */
 
 import { pipeline, env } from '@fugood/transformers';
-import { HNSW } from 'hnsw-lite';
-import * as RNFS from 'react-native-fs';
-import { join } from 'path';
+import { SimpleVectorIndex } from './simpleVectorIndex';
 
 export interface Document {
   id: string;
@@ -69,7 +67,7 @@ export class SemanticSearchEngine {
   private maxLayers: number;
 
   private extractor: any;
-  private index: HNSW | null = null;
+  private index: SimpleVectorIndex | null = null;
   private documents: Map<string, Document> = new Map(); // Changed key to string (ID)
   private dimension: number = 384; // Default for all-MiniLM-L6-v2
   private numElements: number = 0;
@@ -78,8 +76,8 @@ export class SemanticSearchEngine {
 
   constructor(options: SemanticSearchOptions = {}) {
     this.modelName = options.modelName || 'Xenova/all-MiniLM-L6-v2';
-    // Use DocumentDirectoryPath for React Native
-    this.dbPath = options.dbPath || RNFS.DocumentDirectoryPath + '/vector_db';
+    // Use assets/dbindex for the database path
+    this.dbPath = options.dbPath || 'assets/dbindex';
     this.space = options.space || 'cosine';
     this.maxElements = options.maxElements || 10000;
     this.m = options.m || 16;
@@ -96,12 +94,6 @@ export class SemanticSearchEngine {
     this.extractor = await pipeline('feature-extraction', this.modelName);
     console.log('Model loaded successfully.');
 
-    // Ensure DB directory exists
-    const exists = await RNFS.exists(this.dbPath);
-    if (!exists) {
-      await RNFS.mkdir(this.dbPath);
-    }
-
     // Load bookmark mapping
     await this.loadBookmarkMapping();
 
@@ -112,18 +104,13 @@ export class SemanticSearchEngine {
    * Load bookmark to title/page mapping
    */
   private async loadBookmarkMapping(): Promise<void> {
-    const mappingPath = this.dbPath + '/title_page.json';
-    const exists = await RNFS.exists(mappingPath);
-    if (exists) {
-      try {
-        const content = await RNFS.readFile(mappingPath, 'utf8');
-        const mappingData: BookmarkMapping[] = JSON.parse(content);
-        mappingData.forEach(item => {
-          this.bookmarkMap.set(item.bookmark_id, item);
-        });
-      } catch (error) {
-        console.warn('Warning: Could not load bookmark mapping from title_page.json');
-      }
+    try {
+      const mappingData: BookmarkMapping[] = require('../../assets/dbindex/title_page.json');
+      mappingData.forEach(item => {
+        this.bookmarkMap.set(item.bookmark_id, item);
+      });
+    } catch (error) {
+      console.warn('Warning: Could not load bookmark mapping from title_page.json');
     }
   }
 
@@ -154,12 +141,9 @@ export class SemanticSearchEngine {
 
     console.log(`Indexing ${documents.length} documents...`);
 
-    // Initialize HNSW index
-    // hnsw-lite constructor(maxLayers, maxEdges, distanceFunction)
-    // Initialize HNSW index
-    // hnsw-lite constructor(maxLayers, maxEdges, distanceFunction)
+    // Initialize SimpleVectorIndex
     const distanceMetric = this.space === 'l2' ? 'euclideanDistance' : 'cosineSimilarity';
-    this.index = new HNSW(this.maxLayers, this.m, distanceMetric);
+    this.index = new SimpleVectorIndex(this.maxLayers, this.m, distanceMetric);
 
     // Generate embeddings and add to index
     for (let i = 0; i < documents.length; i++) {
@@ -197,11 +181,9 @@ export class SemanticSearchEngine {
 
     if (!this.index || this.numElements === 0) {
       // Try to load from disk
-      const indexPath = this.dbPath + '/index.dat';
-      const exists = await RNFS.exists(indexPath);
-      if (exists) {
+      try {
         await this.loadIndex();
-      } else {
+      } catch {
         throw new Error('No index found. Please index documents first.');
       }
     }
@@ -209,26 +191,36 @@ export class SemanticSearchEngine {
     // Generate query embedding
     const queryEmbedding = await this.generateEmbedding(query);
 
-    // Search in index
-    // hnsw-lite query returns string[] (IDs)
-    const resultIds = this.index!.query(queryEmbedding, Math.min(topK, this.numElements));
+    // Search in index with distances
+    const searchResults = this.index!.queryWithDistances(queryEmbedding, Math.min(topK, this.numElements));
 
     // Format results
     const results: SearchResult[] = [];
-    for (const id of resultIds) {
-      const doc = this.documents.get(id);
+    for (const result of searchResults) {
+      const doc = this.documents.get(result.id);
 
       if (doc) {
         // Get title and page number from bookmark mapping
         let title: string | undefined;
         let pageNumber: number | undefined;
-        if (doc.bookmark) {
+        if (doc.bookmark && this.bookmarkMap.has(doc.bookmark)) {
           const bookmarkInfo = this.bookmarkMap.get(doc.bookmark);
           if (bookmarkInfo) {
             title = bookmarkInfo.title;
             pageNumber = bookmarkInfo.page_number;
           }
+        } else {
+          // Try to match by text content if no bookmark field
+          // This is a fallback - ideally documents should have bookmark fields
+          console.debug('Document missing bookmark field:', doc.id);
         }
+
+        // For cosine similarity, distance is the similarity (higher is better)
+        // For euclidean, distance is the distance (lower is better)
+        // We'll use the distance value directly and convert to score
+        const score = this.space === 'l2'
+          ? 1 / (1 + result.distance) // Convert euclidean distance to score (0-1, higher is better)
+          : result.distance; // Cosine similarity is already a score (0-1, higher is better)
 
         results.push({
           id: doc.id,
@@ -242,12 +234,12 @@ export class SemanticSearchEngine {
             title,
             pageNumber,
           },
-          distance: 0, // hnsw-lite doesn't return distance
-          score: 0, // Cannot calculate score without distance
+          distance: result.distance,
+          score: score,
         });
       }
     }
-
+    console.log(results);
     return results;
   }
 
@@ -255,70 +247,50 @@ export class SemanticSearchEngine {
    * Save index to disk
    */
   private async saveIndex(): Promise<void> {
-    const indexPath = this.dbPath + '/index.dat';
-    const docsPath = this.dbPath + '/documents.json';
-    const metaPath = this.dbPath + '/metadata.json';
-
-    // Save HNSW index
-    const indexJson = this.index!.toJSON();
-    await RNFS.writeFile(indexPath, JSON.stringify(indexJson), 'utf8');
-
-    // Save documents
-    const docsArray = Array.from(this.documents.entries());
-    await RNFS.writeFile(docsPath, JSON.stringify(docsArray, null, 2), 'utf8');
-
-    // Save metadata
-    const metadata = {
-      dimension: this.dimension,
-      numElements: this.numElements,
-      space: this.space,
-      modelName: this.modelName,
-    };
-    await RNFS.writeFile(metaPath, JSON.stringify(metadata, null, 2), 'utf8');
-
-    console.log(`Index saved to ${this.dbPath}`);
+    console.log('Note: Saving to assets is not supported. Index is loaded from bundled assets.');
+    // Index is read-only from assets, no saving needed
   }
 
   /**
    * Load index from disk
    */
   private async loadIndex(): Promise<void> {
-    const indexPath = this.dbPath + '/index.dat';
-    const docsPath = this.dbPath + '/documents.json';
-    const metaPath = this.dbPath + '/metadata.json';
+    try {
+      // Load metadata
+      const metadata = require('../../assets/dbindex/metadata.json');
 
-    const indexExists = await RNFS.exists(indexPath);
-    const docsExists = await RNFS.exists(docsPath);
-    const metaExists = await RNFS.exists(metaPath);
+      // Validate model compatibility
+      if (metadata.modelName && metadata.modelName !== this.modelName) {
+        console.warn(`Warning: Index was created with model '${metadata.modelName}' but you're using '${this.modelName}'. This may cause errors. Consider reindexing with --clear.`);
+      }
 
-    if (!indexExists || !docsExists || !metaExists) {
-      throw new Error('Index files not found. Please index documents first.');
+      this.dimension = metadata.dimension;
+      this.numElements = metadata.numElements;
+      this.space = metadata.space;
+
+      // Load SimpleVectorIndex
+      const embeddingsArray = require('../../assets/dbindex/embeddings.json');
+      console.log('Loaded embeddings.json array with', embeddingsArray.length, 'entries');
+
+      // Convert array format to IndexData format
+      const distanceMetric: 'cosineSimilarity' | 'euclideanDistance' =
+        this.space === 'l2' ? 'euclideanDistance' : 'cosineSimilarity';
+      const vectors = embeddingsArray.map(([id, vector]: [string, number[]]) => ({ id, vector }));
+      const indexData = {
+        vectors,
+        distanceFunction: distanceMetric,
+      };
+
+      this.index = SimpleVectorIndex.rebuildFromJSON(indexData);
+
+      // Load documents
+      const docsArray = require('../../assets/dbindex/documents.json');
+      this.documents = new Map(docsArray);
+
+      console.log(`Loaded index with ${this.numElements} documents.`);
+    } catch (error) {
+      throw new Error('Index files not found. Please ensure assets/dbindex contains the required files.');
     }
-
-    // Load metadata
-    const metaContent = await RNFS.readFile(metaPath, 'utf8');
-    const metadata = JSON.parse(metaContent);
-
-    // Validate model compatibility
-    if (metadata.modelName && metadata.modelName !== this.modelName) {
-      console.warn(`Warning: Index was created with model '${metadata.modelName}' but you're using '${this.modelName}'. This may cause errors. Consider reindexing with --clear.`);
-    }
-
-    this.dimension = metadata.dimension;
-    this.numElements = metadata.numElements;
-    this.space = metadata.space;
-
-    // Load HNSW index
-    const indexContent = await RNFS.readFile(indexPath, 'utf8');
-    const indexJson = JSON.parse(indexContent);
-    this.index = HNSW.rebuildFromJSON(indexJson);
-
-    // Load documents
-    const docsContent = await RNFS.readFile(docsPath, 'utf8');
-    const docsArray = JSON.parse(docsContent);
-    this.documents = new Map(docsArray);
-
-    console.log(`Loaded index with ${this.numElements} documents.`);
   }
 
   /**
@@ -332,17 +304,16 @@ export class SemanticSearchEngine {
   }> {
     // Try to load from disk if not already loaded
     if (this.numElements === 0) {
-      const metaPath = this.dbPath + '/metadata.json';
-      const exists = await RNFS.exists(metaPath);
-      if (exists) {
-        const metaContent = await RNFS.readFile(metaPath, 'utf8');
-        const metadata = JSON.parse(metaContent);
+      try {
+        const metadata = require('../../assets/dbindex/metadata.json');
         return {
           documentCount: metadata.numElements || 0,
           dimension: metadata.dimension || this.dimension,
           modelName: metadata.modelName || this.modelName,
           dbPath: this.dbPath,
         };
+      } catch {
+        // Metadata not found, return defaults
       }
     }
 
