@@ -13,12 +13,12 @@ export default function SpecialMapsDetailScreen() {
     // Static image map (must use static require so Metro can bundle assets)
     const IMAGE_MAP: Record<string, any> = {
         // Baker_Institute.jpg on disk is corrupted (invalid header). Use a safe fallback so Metro can bundle.
-        'Baker Institute': require('@/assets/images/maps/Baker Institute.jpg'),
-        'George R. Brown Tennis Center': require('@/assets/images/maps/George R. Brown Tennis Center.jpg'),
-        'Ley Track & Holloway Field': require('@/assets/images/maps/Ley Track & Holloway Field.jpg'),
-        'Rice Stadium': require('@/assets/images/maps/Rice Stadium.jpg'),
-        'Reckling Park': require('@/assets/images/maps/Reckling Park.jpg'),
-        'Tudor Fieldhouse': require('@/assets/images/maps/Tudor Fieldhouse.jpg'),
+        'Baker Institute': require('@/assets/images/maps/Baker-Institute.jpg'),
+        'George R. Brown Tennis Center': require('@/assets/images/maps/George-R-Brown-Tennis-Center.jpg'),
+        'Ley Track & Holloway Field': require('@/assets/images/maps/Ley-Track-and-Holloway-Field.jpg'),
+        'Rice Stadium': require('@/assets/images/maps/Rice-Stadium.jpg'),
+        'Reckling Park': require('@/assets/images/maps/Reckling-Park.jpg'),
+        'Tudor Fieldhouse': require('@/assets/images/maps/Tudor-Fieldhouse.jpg'),
     };
 
 
