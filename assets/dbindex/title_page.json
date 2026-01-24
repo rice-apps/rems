@@ -1,0 +1,412 @@
+[
+	{
+		"title": "Table of Contents",
+		"page_number": 2,
+		"bookmark_id": "bookmark0"
+	},
+	{
+		"title": "Preface",
+		"page_number": 5,
+		"bookmark_id": "bookmark1"
+	},
+	{
+		"title": "General Rules for Following the Clinical Guidelines",
+		"page_number": 5,
+		"bookmark_id": "bookmark2"
+	},
+	{
+		"title": "Authorization Level",
+		"page_number": 6,
+		"bookmark_id": "bookmark3"
+	},
+	{
+		"title": "Infectious Disease Precaution Recommendations",
+		"page_number": 7,
+		"bookmark_id": "bookmark4"
+	},
+	{
+		"title": "Post-Exposure Prophylaxis Recommendations",
+		"page_number": 8,
+		"bookmark_id": "bookmark5"
+	},
+	{
+		"title": "Informed Patient Consent & Refusal",
+		"page_number": 9,
+		"bookmark_id": "bookmark6"
+	},
+	{
+		"title": "Multiple Patient Scenarios / Mass Casualty Events",
+		"page_number": 12,
+		"bookmark_id": "bookmark7"
+	},
+	{
+		"title": "Patient Destination Determination",
+		"page_number": 20,
+		"bookmark_id": "bookmark8"
+	},
+	{
+		"title": "Medical Assessment & Treatment",
+		"page_number": 21,
+		"bookmark_id": "bookmark9"
+	},
+	{
+		"title": "Medical General Assessment: Adult and Pediatric",
+		"page_number": 22,
+		"bookmark_id": "bookmark10"
+	},
+	{
+		"title": "Abdominal Pain, Nausea, Vomiting, and Diarrhea",
+		"page_number": 25,
+		"bookmark_id": "bookmark11"
+	},
+	{
+		"title": "Allergic Reaction and Anaphylaxis",
+		"page_number": 26,
+		"bookmark_id": "bookmark12"
+	},
+	{
+		"title": "Altered Mental Status",
+		"page_number": 30,
+		"bookmark_id": "bookmark13"
+	},
+	{
+		"title": "Behavioral Emergency",
+		"page_number": 32,
+		"bookmark_id": "bookmark14"
+	},
+	{
+		"title": "Cardiac Arrest",
+		"page_number": 34,
+		"bookmark_id": "bookmark15"
+	},
+	{
+		"title": "Cardiac Rhythm Abnormalities (Non-Arrest)",
+		"page_number": 37,
+		"bookmark_id": "bookmark16"
+	},
+	{
+		"title": "Chest Pain of Unknown Etiology",
+		"page_number": 39,
+		"bookmark_id": "bookmark17"
+	},
+	{
+		"title": "Covid-19",
+		"page_number": 41,
+		"bookmark_id": "bookmark18"
+	},
+	{
+		"title": "Dyspnea of Unknown Etiology",
+		"page_number": 43,
+		"bookmark_id": "bookmark19"
+	},
+	{
+		"title": "Environmental: Cold Illness",
+		"page_number": 44,
+		"bookmark_id": "bookmark20"
+	},
+	{
+		"title": "Environmental: Heat Illness",
+		"page_number": 45,
+		"bookmark_id": "bookmark21"
+	},
+	{
+		"title": "Fever",
+		"page_number": 47,
+		"bookmark_id": "bookmark22"
+	},
+	{
+		"title": "Hypertensive Emergency",
+		"page_number": 48,
+		"bookmark_id": "bookmark23"
+	},
+	{
+		"title": "Neonatal Resuscitation",
+		"page_number": 49,
+		"bookmark_id": "bookmark24"
+	},
+	{
+		"title": "Obstetric Emergencies",
+		"page_number": 51,
+		"bookmark_id": "bookmark25"
+	},
+	{
+		"title": "Pre-eclampsia/Eclampsia",
+		"page_number": 53,
+		"bookmark_id": "bookmark26"
+	},
+	{
+		"title": "Vaginal Bleeding",
+		"page_number": 54,
+		"bookmark_id": "bookmark27"
+	},
+	{
+		"title": "Labor and Delivery",
+		"page_number": 55,
+		"bookmark_id": "bookmark28"
+	},
+	{
+		"title": "Uncomplicated Delivery",
+		"page_number": 55,
+		"bookmark_id": "bookmark28"
+	},
+	{
+		"title": "Prolapsed Cord",
+		"page_number": 57,
+		"bookmark_id": "bookmark29"
+	},
+	{
+		"title": "Presenting Limb",
+		"page_number": 57,
+		"bookmark_id": "bookmark29"
+	},
+	{
+		"title": "Breech Presentation",
+		"page_number": 58,
+		"bookmark_id": "bookmark30"
+	},
+	{
+		"title": "Shoulder Dystocia",
+		"page_number": 59,
+		"bookmark_id": "bookmark31"
+	},
+	{
+		"title": "Uterine Inversion",
+		"page_number": 60,
+		"bookmark_id": "bookmark32"
+	},
+	{
+		"title": "Oleoresin Capsicum (OC) Spray Exposure",
+		"page_number": 61,
+		"bookmark_id": "bookmark33"
+	},
+	{
+		"title": "Respiratory Arrest",
+		"page_number": 62,
+		"bookmark_id": "bookmark34"
+	},
+	{
+		"title": "Seizures",
+		"page_number": 63,
+		"bookmark_id": "bookmark35"
+	},
+	{
+		"title": "Stroke/CVA",
+		"page_number": 65,
+		"bookmark_id": "bookmark36"
+	},
+	{
+		"title": "Trauma Assessment & Treatment",
+		"page_number": 66,
+		"bookmark_id": "bookmark37"
+	},
+	{
+		"title": "Trauma General Assessment: Adult and Pediatric",
+		"page_number": 67,
+		"bookmark_id": "bookmark38"
+	},
+	{
+		"title": "Animal Bites and Stings",
+		"page_number": 69,
+		"bookmark_id": "bookmark39"
+	},
+	{
+		"title": "Amputation",
+		"page_number": 71,
+		"bookmark_id": "bookmark40"
+	},
+	{
+		"title": "Burns",
+		"page_number": 72,
+		"bookmark_id": "bookmark41"
+	},
+	{
+		"title": "Percent Body Surface Area (BSA) Estimation Chart",
+		"page_number": 73,
+		"bookmark_id": "bookmark42"
+	},
+	{
+		"title": "Chest, Abdomen, and Pelvis Trauma",
+		"page_number": 74,
+		"bookmark_id": "bookmark43"
+	},
+	{
+		"title": "Pelvic Binder Application",
+		"page_number": 75,
+		"bookmark_id": "bookmark44"
+	},
+	{
+		"title": "Compartment Syndrome",
+		"page_number": 76,
+		"bookmark_id": "bookmark45"
+	},
+	{
+		"title": "Eye Injury",
+		"page_number": 77,
+		"bookmark_id": "bookmark46"
+	},
+	{
+		"title": "Head, Neck, and Spinal Trauma",
+		"page_number": 78,
+		"bookmark_id": "bookmark47"
+	},
+	{
+		"title": "Spinal Motion Restriction (SMR)",
+		"page_number": 79,
+		"bookmark_id": "bookmark48"
+	},
+	{
+		"title": "Life Threatening Hemorrhage",
+		"page_number": 80,
+		"bookmark_id": "bookmark49"
+	},
+	{
+		"title": "Tourniquet Application",
+		"page_number": 81,
+		"bookmark_id": "bookmark50"
+	},
+	{
+		"title": "Hemostatic Agent Application",
+		"page_number": 83,
+		"bookmark_id": "bookmark51"
+	},
+	{
+		"title": "Extremity Injury",
+		"page_number": 84,
+		"bookmark_id": "bookmark52"
+	},
+	{
+		"title": "Sexual Assault: Adult and Pediatric",
+		"page_number": 85,
+		"bookmark_id": "bookmark53"
+	},
+	{
+		"title": "Splinting",
+		"page_number": 86,
+		"bookmark_id": "bookmark54"
+	},
+	{
+		"title": "Trauma and Hypovolemic Shock Supportive Care",
+		"page_number": 87,
+		"bookmark_id": "bookmark55"
+	},
+	{
+		"title": "Water Submersion Events",
+		"page_number": 88,
+		"bookmark_id": "bookmark56"
+	},
+	{
+		"title": "Equipment & Procedure Guidelines",
+		"page_number": 89,
+		"bookmark_id": "bookmark57"
+	},
+	{
+		"title": "Automated External Defibrillation (AED): Adult and Pediatric",
+		"page_number": 90,
+		"bookmark_id": "bookmark58"
+	},
+	{
+		"title": "Cardiac Monitor Operation: Lifepak 15 (LP15)",
+		"page_number": 93,
+		"bookmark_id": "bookmark59"
+	},
+	{
+		"title": "Cardiac Pacing",
+		"page_number": 98,
+		"bookmark_id": "bookmark60"
+	},
+	{
+		"title": "Synchronized Cardioversion",
+		"page_number": 101,
+		"bookmark_id": "bookmark61"
+	},
+	{
+		"title": "Medication Administration",
+		"page_number": 103,
+		"bookmark_id": "bookmark62"
+	},
+	{
+		"title": "Venous Access: Intravenous",
+		"page_number": 105,
+		"bookmark_id": "bookmark63"
+	},
+	{
+		"title": "Venous Access: Intraosseous",
+		"page_number": 107,
+		"bookmark_id": "bookmark64"
+	},
+	{
+		"title": "Airway Assessment",
+		"page_number": 111,
+		"bookmark_id": "bookmark65"
+	},
+	{
+		"title": "Airway Suctioning",
+		"page_number": 112,
+		"bookmark_id": "bookmark66"
+	},
+	{
+		"title": "Oxygen Administration",
+		"page_number": 114,
+		"bookmark_id": "bookmark67"
+	},
+	{
+		"title": "Bag-Valve Mask Management",
+		"page_number": 116,
+		"bookmark_id": "bookmark68"
+	},
+	{
+		"title": "Nebulization Therapy",
+		"page_number": 117,
+		"bookmark_id": "bookmark69"
+	},
+	{
+		"title": "Supraglottic Airway",
+		"page_number": 118,
+		"bookmark_id": "bookmark70"
+	},
+	{
+		"title": "Waveform Capnography",
+		"page_number": 120,
+		"bookmark_id": "bookmark71"
+	},
+	{
+		"title": "Blood Glucose Analysis",
+		"page_number": 122,
+		"bookmark_id": "bookmark72"
+	},
+	{
+		"title": "Reference Scores",
+		"page_number": 123,
+		"bookmark_id": "bookmark73"
+	},
+	{
+		"title": "Los Angeles Prehospital Stroke Screen (LAPSS)",
+		"page_number": 123,
+		"bookmark_id": "bookmark73"
+	},
+	{
+		"title": "Rapid Arterial oCclusion Evaluation Score (RACE)",
+		"page_number": 123,
+		"bookmark_id": "bookmark73"
+	},
+	{
+		"title": "APGAR Score",
+		"page_number": 124,
+		"bookmark_id": "bookmark74"
+	},
+	{
+		"title": "Operations Guidelines",
+		"page_number": 125,
+		"bookmark_id": "bookmark75"
+	},
+	{
+		"title": "Fire Extinguishers",
+		"page_number": 126,
+		"bookmark_id": "bookmark76"
+	},
+	{
+		"title": "Hazardous Materials Response",
+		"page_number": 128,
+		"bookmark_id": "bookmark77"
+	}
+]
