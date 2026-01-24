@@ -466,6 +466,8 @@ export default function Index() {
   );
 
   // Route dropdown
+  const [drugSearchQuery, setDrugSearchQuery] = useState("");
+  const [filteredDrugItems, setFilteredDrugItems] = useState(drugItems);
   const [selectedRoute, setSelectedRoute] = useState<string | null>(null);
   const [showRoutePicker, setShowRoutePicker] = useState(false);
   const [routeItems, setRouteItems] = useState<RouteOption[]>([
@@ -474,11 +476,6 @@ export default function Index() {
 
   // Age group dropdown
   const [ageGroup, setAgeGroup] = useState<string | null>(null);
-  const [showAgeGroupPicker, setShowAgeGroupPicker] = useState(false);
-  const [ageGroupItems] = useState([
-    { label: "Pediatric", value: "pediatric" },
-    { label: "Adult", value: "adult" },
-  ]);
 
   // Weight input
   const [weight, setWeight] = useState("");
@@ -506,6 +503,17 @@ export default function Index() {
       }
     }
   }, [selectedDrug]);
+
+  useEffect(() => {
+    if (drugSearchQuery.trim() === "") {
+      setFilteredDrugItems(drugItems);
+    } else {
+      const filtered = drugItems.filter((drug) =>
+        drug.label.toLowerCase().includes(drugSearchQuery.toLowerCase())
+      );
+      setFilteredDrugItems(filtered);
+    }
+  }, [drugSearchQuery, drugItems]);
 
   // Recalculate dosage when inputs change
   React.useEffect(() => {
@@ -644,36 +652,71 @@ export default function Index() {
           <Modal
             visible={showDrugPicker}
             transparent={true}
-            animationType="fade"
+            animationType="slide"
           >
-            <View style={styles.modalContainer}>
+            <KeyboardAvoidingView
+              behavior={Platform.OS === "ios" ? "padding" : "height"}
+              style={styles.modalContainer}
+            >
               <TouchableOpacity
                 style={styles.modalOverlay}
                 activeOpacity={1}
-                onPress={() => setShowDrugPicker(false)}
+                onPress={() => {
+                  setShowDrugPicker(false);
+                  setDrugSearchQuery("");
+                }}
               />
               <View style={styles.modalContent}>
                 <View style={styles.modalHeader}>
-                  <TouchableOpacity onPress={() => setShowDrugPicker(false)}>
+                  <Text style={styles.modalTitle}>Select Drug</Text>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setShowDrugPicker(false);
+                      setDrugSearchQuery("");
+                    }}
+                  >
                     <Text style={styles.modalDoneButton}>Done</Text>
                   </TouchableOpacity>
                 </View>
-                <Picker
-                  selectedValue={selectedDrug}
-                  onValueChange={(itemValue) => setSelectedDrug(itemValue)}
-                  itemStyle={styles.pickerItem}
-                >
-                  <Picker.Item label="Select a drug..." value={null} />
-                  {drugItems.map((drug) => (
-                    <Picker.Item
-                      key={drug.value}
-                      label={drug.label}
-                      value={drug.value}
-                    />
-                  ))}
-                </Picker>
+
+                {/* Search Bar */}
+                <View style={styles.searchContainer}>
+                  <TextInput
+                    style={styles.searchInput}
+                    placeholder="Search drugs..."
+                    value={drugSearchQuery}
+                    onChangeText={setDrugSearchQuery}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                  {drugSearchQuery.length > 0 && (
+                    <TouchableOpacity
+                      onPress={() => setDrugSearchQuery("")}
+                      style={styles.clearButton}
+                    >
+                      <Text style={styles.clearButtonText}>✕</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+
+                <ScrollView style={styles.pickerScrollView}>
+                  <Picker
+                    selectedValue={selectedDrug}
+                    onValueChange={(itemValue) => setSelectedDrug(itemValue)}
+                    itemStyle={styles.pickerItem}
+                  >
+                    <Picker.Item label="Select a drug..." value={null} />
+                    {filteredDrugItems.map((drug) => (
+                      <Picker.Item
+                        key={drug.value}
+                        label={drug.label}
+                        value={drug.value}
+                      />
+                    ))}
+                  </Picker>
+                </ScrollView>
               </View>
-            </View>
+            </KeyboardAvoidingView>
           </Modal>
 
           <Text style={styles.label}>Route of Administration:</Text>
@@ -805,53 +848,40 @@ export default function Index() {
           </Animated.View>
 
           <Text style={styles.label}>Age Group:</Text>
-          <TouchableOpacity
-            style={styles.pickerButton}
-            onPress={() => setShowAgeGroupPicker(true)}
-          >
-            <Text style={styles.pickerButtonText}>
-              {ageGroup
-                ? ageGroupItems.find((g) => g.value === ageGroup)?.label
-                : "Select age group..."}
-            </Text>
-          </TouchableOpacity>
-
-          <Modal
-            visible={showAgeGroupPicker}
-            transparent={true}
-            animationType="fade"
-          >
-            <View style={styles.modalContainer}>
-              <TouchableOpacity
-                style={styles.modalOverlay}
-                activeOpacity={1}
-                onPress={() => setShowAgeGroupPicker(false)}
-              />
-              <View style={styles.modalContent}>
-                <View style={styles.modalHeader}>
-                  <TouchableOpacity
-                    onPress={() => setShowAgeGroupPicker(false)}
-                  >
-                    <Text style={styles.modalDoneButton}>Done</Text>
-                  </TouchableOpacity>
-                </View>
-                <Picker
-                  selectedValue={ageGroup}
-                  onValueChange={(itemValue) => setAgeGroup(itemValue)}
-                  itemStyle={styles.pickerItem}
-                >
-                  <Picker.Item label="Select age group..." value={null} />
-                  {ageGroupItems.map((group) => (
-                    <Picker.Item
-                      key={group.value}
-                      label={group.label}
-                      value={group.value}
-                    />
-                  ))}
-                </Picker>
-              </View>
-            </View>
-          </Modal>
+          <View style={styles.ageGroupButtonContainer}>
+            <TouchableOpacity
+              style={[
+                styles.ageGroupButton,
+                ageGroup === "pediatric" && styles.ageGroupButtonActive,
+              ]}
+              onPress={() => setAgeGroup("pediatric")}
+            >
+              <Text
+                style={[
+                  styles.ageGroupButtonText,
+                  ageGroup === "pediatric" && styles.ageGroupButtonTextActive,
+                ]}
+              >
+                Pediatric
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.ageGroupButton,
+                ageGroup === "adult" && styles.ageGroupButtonActive,
+              ]}
+              onPress={() => setAgeGroup("adult")}
+            >
+              <Text
+                style={[
+                  styles.ageGroupButtonText,
+                  ageGroup === "adult" && styles.ageGroupButtonTextActive,
+                ]}
+              >
+                Adult
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </KeyboardAvoidingView>
     </ScrollView>
@@ -937,7 +967,7 @@ const styles = StyleSheet.create({
     color: "#133465",
   },
   pickerItem: {
-    height: 120,
+    height: 300,
     color: "#133465",
     fontWeight: "bold",
   },
@@ -977,6 +1007,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingBottom: 40,
+    maxHeight: "70%",
   },
   modalHeader: {
     flexDirection: "row",
@@ -1032,5 +1063,72 @@ const styles = StyleSheet.create({
     left: -50,
     width: 1000,
     height: 200,
+  },
+  ageGroupButtonContainer: {
+    flexDirection: "row",
+    width: "100%",
+    marginBottom: 20,
+    gap: 10,
+  },
+  ageGroupButton: {
+    flex: 1,
+    height: 55,
+    borderWidth: 1,
+    borderColor: "#e0e0e0",
+    borderRadius: 8,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "white",
+  },
+  ageGroupButtonActive: {
+    backgroundColor: "#003686",
+    borderColor: "#003686",
+  },
+  ageGroupButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#666",
+  },
+  ageGroupButtonTextActive: {
+    color: "white",
+  },
+  modalTitle: {
+    fontSize: 17,
+    fontWeight: "600",
+    color: "#000",
+    flex: 1,
+    textAlign: "center",
+  },
+  searchContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e0e0e0",
+    position: "relative",
+  },
+  searchInput: {
+    height: 40,
+    backgroundColor: "#f5f5f5",
+    borderRadius: 10,
+    paddingHorizontal: 15,
+    fontSize: 16,
+    color: "#133465",
+  },
+  clearButton: {
+    position: "absolute",
+    right: 24,
+    top: 20,
+    width: 30,
+    height: 30,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  clearButtonText: {
+    fontSize: 18,
+    color: "#999",
+    fontWeight: "bold",
+  },
+  pickerScrollView: {
+    maxHeight: 400,
   },
 });
