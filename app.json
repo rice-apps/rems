@@ -50,8 +50,7 @@
       "@config-plugins/react-native-pdf"
     ],
     "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
+      "typedRoutes": true
     }
   }
 }
