@@ -116,30 +116,33 @@ export default function SearchScreen() {
     // Close modal
     setShowResultsModal(false);
 
-    // Force PDF to navigate to the page using ref
     if (pdfRef.current) {
-      // Small delay to ensure PDF is visible before navigation
       setTimeout(() => {
         pdfRef.current?.setPage(pageNumber);
       }, 100);
     }
   };
 
-  const renderSearchResult = ({ item }: { item: SearchResult }) => {
-    const isHighRelevance = item.relevance > 0.7;
-    const isMediumRelevance = item.relevance > 0.5;
-
+  const renderSearchResult = ({
+    item,
+  }: {
+    item: SearchResult;
+    index: number;
+  }) => {
     return (
-      <View
-        style={[
-          styles.resultCard,
-          isHighRelevance && styles.resultCardHighRelevance,
-          isMediumRelevance &&
-            !isHighRelevance &&
-            styles.resultCardMediumRelevance,
-        ]}
+      <TouchableOpacity
+        style={styles.resultCard}
+        onPress={() => jumpToPage(item.page)}
+        activeOpacity={0.7}
       >
+        {/* Title Section */}
         <View style={styles.resultTitleSection}>
+          <Ionicons
+            name="document-text-outline"
+            size={18}
+            color="#6B7280"
+            style={styles.titleIcon}
+          />
           {item.title ? (
             <Text style={styles.resultTitle} numberOfLines={2}>
               {item.title}
@@ -151,19 +154,23 @@ export default function SearchScreen() {
           )}
         </View>
 
+        {/* Preview Text */}
         <Text style={styles.resultPreview} numberOfLines={3}>
           {item.text}
         </Text>
 
-        <TouchableOpacity
-          style={styles.pageButton}
-          onPress={() => jumpToPage(item.page)}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.pageButtonText}>Page {item.page}</Text>
-          <Text style={styles.pageButtonArrow}>→</Text>
-        </TouchableOpacity>
-      </View>
+        {/* Footer with Page Info and Arrow */}
+        <View style={styles.cardFooter}>
+          <View style={styles.pageInfo}>
+            <Ionicons name="book-outline" size={14} color="#6B7280" />
+            <Text style={styles.pageInfoText}>Page {item.page}</Text>
+          </View>
+          <View style={styles.goButton}>
+            <Text style={styles.goButtonText}>View</Text>
+            <Ionicons name="chevron-forward" size={14} color="#fff" />
+          </View>
+        </View>
+      </TouchableOpacity>
     );
   };
 
@@ -254,9 +261,15 @@ export default function SearchScreen() {
               style={styles.backButton}
               onPress={() => setShowResultsModal(false)}
             >
-              <Text style={styles.backButtonText}>← Back</Text>
+              <Ionicons name="chevron-back" size={24} color="#007AFF" />
+              <Text style={styles.backButtonText}>Back</Text>
             </TouchableOpacity>
-            <Text style={styles.modalTitle}>Search Results</Text>
+            <View style={styles.modalTitleContainer}>
+              <Text style={styles.modalTitle}>Search Results</Text>
+              <Text style={styles.modalSubtitle}>
+                {searchResults.length} results for "{lastSearchQuery}"
+              </Text>
+            </View>
             <View style={styles.backButtonPlaceholder} />
           </View>
 
@@ -392,20 +405,32 @@ const styles = StyleSheet.create({
     borderBottomColor: "#e0e0e0",
   },
   backButton: {
+    flexDirection: "row",
+    alignItems: "center",
     padding: 8,
   },
   backButtonText: {
     fontSize: 16,
     color: "#007AFF",
     fontWeight: "600",
+    marginLeft: 2,
   },
   backButtonPlaceholder: {
-    width: 60,
+    width: 70,
+  },
+  modalTitleContainer: {
+    alignItems: "center",
+    flex: 1,
   },
   modalTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: "700",
-    color: "#333",
+    color: "#1a1a1a",
+  },
+  modalSubtitle: {
+    fontSize: 12,
+    color: "#666",
+    marginTop: 2,
   },
   resultsView: {
     flex: 1,
@@ -429,64 +454,75 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
-    borderWidth: 2,
-    borderColor: "#e0e0e0",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.05,
     shadowRadius: 3,
     elevation: 2,
   },
-  resultCardHighRelevance: {
-    borderColor: "#34C759",
-    backgroundColor: "#f8fff9",
-  },
-  resultCardMediumRelevance: {
-    borderColor: "#FF9500",
-    backgroundColor: "#fffaf5",
-  },
   resultTitleSection: {
-    marginBottom: 8,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginBottom: 10,
+  },
+  titleIcon: {
+    marginRight: 8,
+    marginTop: 2,
   },
   resultTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#333",
-    lineHeight: 22,
-  },
-  resultSection: {
+    flex: 1,
     fontSize: 15,
     fontWeight: "600",
-    color: "#555",
+    color: "#111827",
+    lineHeight: 21,
+  },
+  resultSection: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#111827",
     lineHeight: 21,
   },
   resultPreview: {
     fontSize: 14,
-    color: "#666",
+    color: "#6B7280",
     lineHeight: 20,
-    marginBottom: 12,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
+    marginBottom: 14,
+    marginLeft: 26,
   },
-  pageButton: {
+  cardFooter: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "#007AFF",
-    padding: 12,
-    borderRadius: 8,
-    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#F3F4F6",
   },
-  pageButtonText: {
-    fontSize: 15,
+  pageInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  pageInfoText: {
+    fontSize: 13,
+    color: "#6B7280",
+    fontWeight: "500",
+    marginLeft: 4,
+  },
+  goButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    backgroundColor: "#007AFF",
+  },
+  goButtonText: {
+    fontSize: 13,
     fontWeight: "600",
     color: "#fff",
-  },
-  pageButtonArrow: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#fff",
+    marginRight: 4,
   },
   noResultsContainer: {
     flex: 1,
