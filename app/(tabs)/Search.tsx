@@ -123,6 +123,7 @@ export default function SearchScreen() {
     }
   };
 
+  //change the color for view button
   const renderSearchResult = ({
     item,
   }: {
