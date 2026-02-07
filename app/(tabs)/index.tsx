@@ -38,8 +38,8 @@ export default function SearchScreen() {
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [searchEngineReady, setSearchEngineReady] = useState(false);
-  const [showResultsModal, setShowResultsModal] = useState(false);
-  const [showRecommendedModal, setShowRecommendedModal] = useState(false);
+  const [showResultsModal, setShowResultsModal] = useState(true);
+  const [showRecommendedModal, setShowRecommendedModal] = useState(true);
   const [isFocused, setIsFocused] = useState(false);
   const searchEngineRef = useRef<SemanticSearchEngine | null>(null);
   const router = useRouter();
@@ -257,77 +257,65 @@ export default function SearchScreen() {
     );
   };
 
+  const recommendedCategories = [
+    { id: 1, label: "Airway & breathing", checked: false },
+    { id: 2, label: "Cardiac", checked: false },
+    { id: 3, label: "Medical (seizure, hypoglycemia)", checked: false },
+    { id: 4, label: "Trauma", checked: false },
+  ];
+
   return (
     <View style={styles.container}>
-      {/* Search Bar */}
-      {/* <Animated.View style={[
-        styles.searchHeader,
-        { marginTop: marginTopAnim },
-      ]}>
-        <View style={styles.searchInputContainer}>
-          <TouchableOpacity onPress = {() => setIsFocused(false)}>
-            <Text>
-              back
-            </Text>
-          </TouchableOpacity>
-          <View style={styles.searchInputWrapper}>
-            <Ionicons
-              name="search"
-              size={20}
-              color="#666"
-              style={styles.searchIcon}
-            />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search medical guidelines..."
-              placeholderTextColor="#999"
-              value={searchQuery}
-              onChangeText={(text) => {
-                setSearchQuery(text);
-                updateRecommendations(text);
-              }}
-              onFocus={() => setIsFocused(true)}
-              returnKeyType="search"
-            />
-          </View>
-          <TouchableOpacity
-            style={[
-              styles.searchButton,
-              !searchEngineReady && styles.searchButtonDisabled,
-            ]}
-            // onPress={handleSearchOrShowResults}
-            disabled={!searchEngineReady}
-          >
-            {isLoading ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : (
-              <Text style={styles.searchButtonText}>
-                {hasExistingResults ? "Results" : "Search"}
-              </Text>
-            )}
-          </TouchableOpacity>
-        </View>
+      {/* Top Header */}
+      <View style={styles.topHeader}>
+        <TouchableOpacity style={styles.hamburgerButton}>
+          <View style={styles.hamburgerLine} />
+          <View style={[styles.hamburgerLine, styles.hamburgerLineShort]} />
+        </TouchableOpacity>
+        <TouchableOpacity>
+          <Text style={styles.loginText}>Log in</Text>
+        </TouchableOpacity>
+      </View>
 
-        {!searchEngineReady && (
-          <View style={styles.initializingBanner}>
-            <ActivityIndicator size="small" color="#007AFF" />
-            <Text style={styles.initializingText}>
-              Initializing search engine...
-            </Text>
-          </View>
-        )}
-      </Animated.View> */}
+      {/* Title */}
       <View style={styles.titleRow}>
         <ThemedText type="title" style={styles.title}>
           REMS
         </ThemedText>
       </View>
+
+      {/* Search Bar Button */}
       <TouchableOpacity
-        style={styles.openSearchButton}
+        style={styles.searchBarButton}
         onPress={() => setShowSearchModal(true)}
       >
-        <Text style={styles.openSearchButtonText}>Open Search</Text>
+        <View style={styles.searchBarLogo}>
+          <Text style={styles.searchBarLogoText}>R</Text>
+        </View>
+        <Text style={styles.searchBarPlaceholder}>Option A</Text>
       </TouchableOpacity>
+
+      {/* Recommended Search Section */}
+      <View style={styles.recommendedCard}>
+        <View style={styles.recommendedHeader}>
+          <Text style={styles.recommendedTitle}>Recommended search</Text>
+          <TouchableOpacity>
+            <Text style={styles.seeMoreText}>See more</Text>
+          </TouchableOpacity>
+        </View>
+        <View style={styles.recommendedContent}>
+          {recommendedCategories.map((category) => (
+            <TouchableOpacity key={category.id} style={styles.categoryRow}>
+              <View style={styles.checkbox}>
+                {category.checked && (
+                  <Ionicons name="checkmark" size={16} color="#fff" />
+                )}
+              </View>
+              <Text style={styles.categoryLabel}>{category.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
 
       <Modal
         visible={showSearchModal}
@@ -614,10 +602,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#fff",
   },
-  titleRow: { 
+  titleRow: {
     alignItems: "center",
-    marginBottom: 18 ,
-    marginTop: 70,
+    marginBottom: 8,
+    marginTop: 0,
   },
   modalHeader: {
     flexDirection: "row",
@@ -902,4 +890,104 @@ const styles = StyleSheet.create({
   sidebarContent: { flex: 1, paddingTop: 60, paddingHorizontal: 16 },
   sidebarListItem: { paddingVertical: 12 },
 
+  // New home page styles
+  topHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingTop: Platform.OS === "ios" ? 60 : 40,
+    paddingBottom: 8,
+  },
+  hamburgerButton: {
+    padding: 8,
+    justifyContent: "center",
+  },
+  hamburgerLine: {
+    width: 22,
+    height: 2,
+    backgroundColor: "#333",
+    marginVertical: 2,
+  },
+  hamburgerLineShort: {
+    width: 14,
+  },
+  loginText: {
+    fontSize: 16,
+    color: "#333",
+    fontWeight: "500",
+  },
+  searchBarButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#ececec",
+    borderRadius: 28,
+    height: 56,
+    paddingHorizontal: 14,
+    marginHorizontal: 20,
+    marginTop: 20,
+  },
+  searchBarLogo: {
+    width: 38,
+    height: 38,
+    borderRadius: 8,
+    backgroundColor: Colors.light.tint,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+  searchBarLogoText: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "700",
+  },
+  searchBarPlaceholder: {
+    color: "#777",
+    fontSize: 16,
+  },
+  recommendedCard: {
+    backgroundColor: "#f3f3f3",
+    borderRadius: 18,
+    padding: 16,
+    marginHorizontal: 20,
+    marginTop: 24,
+  },
+  recommendedHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  recommendedTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#333",
+  },
+  seeMoreText: {
+    fontSize: 14,
+    color: Colors.light.tint,
+    fontWeight: "500",
+  },
+  recommendedContent: {
+    paddingTop: 4,
+  },
+  categoryRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+  },
+  checkbox: {
+    width: 28,
+    height: 28,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: Colors.light.tint,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+  categoryLabel: {
+    fontSize: 16,
+    color: "#333",
+  },
 });
