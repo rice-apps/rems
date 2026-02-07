@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import Pdf, { PdfRef } from "react-native-pdf";
 import { Ionicons } from "@expo/vector-icons";
+import { useLocalSearchParams } from "expo-router";
 import { SemanticSearchEngine } from "../search/semanticSearch";
 
 interface SearchResult {
@@ -24,9 +25,11 @@ interface SearchResult {
 }
 
 export default function SearchScreen() {
+  const { page, nonce } = useLocalSearchParams<{ page?: string; nonce?: string }>();
   const [searchQuery, setSearchQuery] = useState("");
   const [lastSearchQuery, setLastSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [recommendations, setRecommendations] = useState<SearchResult[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [searchEngineReady, setSearchEngineReady] = useState(false);
@@ -49,6 +52,17 @@ export default function SearchScreen() {
     initializeSearchEngine();
   }, []);
 
+  useEffect(() => {
+    if (page) {
+      const pageNum = parseInt(page, 10);
+      if (!isNaN(pageNum) && pdfRef.current) {
+        setTimeout(() => {
+          pdfRef.current?.setPage(pageNum);
+        }, 300);
+      }
+    }
+  }, [page, nonce]);
+
   const source = Platform.select({
     ios: require("../../assets/guidelines/guidelines.pdf"),
     android: { uri: "bundle-assets://guidelines.pdf" },
@@ -62,8 +76,12 @@ export default function SearchScreen() {
     setCurrentPage(page);
   };
 
+  const [recommendedSearches, setRecommendedSearches] = useState<string[]>([]);
+
   const hasSearchChanged = searchQuery.trim() !== lastSearchQuery;
   const hasExistingResults = searchResults.length > 0 && !hasSearchChanged;
+
+  
 
   const handleSearchOrShowResults = async () => {
     if (hasExistingResults) {
@@ -122,6 +140,28 @@ export default function SearchScreen() {
       setTimeout(() => {
         pdfRef.current?.setPage(pageNumber);
       }, 100);
+    }
+  };
+
+  const updateRecommendations = async (query: string) => {
+    if (query.length < 3 || !searchEngineRef.current) {
+      setRecommendations([]);
+      return;
+    }
+
+    try {
+      const results = await searchEngineRef.current.search(query, 5);
+      const formatted: SearchResult[] = results.map((result) => ({
+        page: result.metadata.pageNumber || 1,
+        relevance: result.score,
+        section: result.metadata.title || result.text.substring(0, 100),
+        text: result.text,
+        title: result.metadata.title,
+      }));
+      setRecommendations(formatted);
+    } catch (error) {
+      console.error("Error getting recommendations:", error);
+      setRecommendations([]);
     }
   };
 
@@ -184,7 +224,10 @@ export default function SearchScreen() {
               placeholder="Search medical guidelines..."
               placeholderTextColor="#999"
               value={searchQuery}
-              onChangeText={setSearchQuery}
+              onChangeText={(text) => {
+                setSearchQuery(text);
+                updateRecommendations(text);
+              }}
               onSubmitEditing={handleSearchOrShowResults}
               returnKeyType="search"
             />
@@ -216,6 +259,32 @@ export default function SearchScreen() {
           </View>
         )}
       </View>
+
+      {/* Recommendations */}
+      {recommendations.length > 0 && (
+        <View style={styles.recommendationsContainer}>
+          <FlatList
+            data={recommendations}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={styles.recommendationItem}
+                onPress={() => {
+                  setSearchQuery(item.title || item.section);
+                  setRecommendations([]);
+                  handleSearchOrShowResults();
+                }}
+              >
+                <Text style={styles.recommendationText}>
+                  {item.title || item.section}
+                </Text>
+              </TouchableOpacity>
+            )}
+            keyExtractor={(item, index) => `rec-${index}`}
+            horizontal={false}
+            showsVerticalScrollIndicator={false}
+          />
+        </View>
+      )}
 
       {/* PDF Viewer */}
       <View style={styles.pdfView}>
@@ -498,5 +567,20 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#666",
     textAlign: "center",
+  },
+  recommendationsContainer: {
+    backgroundColor: "#fff",
+    maxHeight: 200,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e0e0e0",
+  },
+  recommendationItem: {
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f0f0f0",
+  },
+  recommendationText: {
+    fontSize: 16,
+    color: "#333",
   },
 });
