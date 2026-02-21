@@ -28,7 +28,9 @@ PODS:
     - Yoga
   - ExpoAsset (12.0.10):
     - ExpoModulesCore
-  - ExpoFileSystem (19.0.19):
+  - ExpoContacts (15.0.11):
+    - ExpoModulesCore
+  - ExpoFileSystem (19.0.21):
     - ExpoModulesCore
   - ExpoFont (14.0.9):
     - ExpoModulesCore
@@ -1405,6 +1407,28 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
+  - react-native-contacts (8.0.10):
+    - hermes-engine
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-Core-prebuilt
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - ReactNativeDependencies
+    - Yoga
   - react-native-pdf (7.0.3):
     - hermes-engine
     - RCTRequired
@@ -2121,6 +2145,7 @@ DEPENDENCIES:
   - EXConstants (from `../node_modules/expo-constants/ios`)
   - Expo (from `../node_modules/expo`)
   - ExpoAsset (from `../node_modules/expo-asset/ios`)
+  - ExpoContacts (from `../node_modules/expo-contacts/ios`)
   - ExpoFileSystem (from `../node_modules/expo-file-system/ios`)
   - ExpoFont (from `../node_modules/expo-font/ios`)
   - ExpoHaptics (from `../node_modules/expo-haptics/ios`)
@@ -2171,6 +2196,7 @@ DEPENDENCIES:
   - React-Mapbuffer (from `../node_modules/react-native/ReactCommon`)
   - React-microtasksnativemodule (from `../node_modules/react-native/ReactCommon/react/nativemodule/microtasks`)
   - react-native-blob-util (from `../node_modules/react-native-blob-util`)
+  - react-native-contacts (from `../node_modules/react-native-contacts`)
   - react-native-pdf (from `../node_modules/react-native-pdf`)
   - react-native-safe-area-context (from `../node_modules/react-native-safe-area-context`)
   - React-NativeModulesApple (from `../node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios`)
@@ -2230,6 +2256,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/expo"
   ExpoAsset:
     :path: "../node_modules/expo-asset/ios"
+  ExpoContacts:
+    :path: "../node_modules/expo-contacts/ios"
   ExpoFileSystem:
     :path: "../node_modules/expo-file-system/ios"
   ExpoFont:
@@ -2329,6 +2357,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native/ReactCommon/react/nativemodule/microtasks"
   react-native-blob-util:
     :path: "../node_modules/react-native-blob-util"
+  react-native-contacts:
+    :path: "../node_modules/react-native-contacts"
   react-native-pdf:
     :path: "../node_modules/react-native-pdf"
   react-native-safe-area-context:
@@ -2414,7 +2444,8 @@ SPEC CHECKSUMS:
   EXConstants: fd688cef4e401dcf798a021cfb5d87c890c30ba3
   Expo: 111394d38f32be09385d4c7f70cc96d2da438d0d
   ExpoAsset: d839c8eae8124470332408427327e8f88beb2dfd
-  ExpoFileSystem: 77157a101e03150a4ea4f854b4dd44883c93ae0a
+  ExpoContacts: 1c976e6c0b9be9b256ea038eba5c86f5707a73ce
+  ExpoFileSystem: 858a44267a3e6e9057e0888ad7c7cfbf55d52063
   ExpoFont: cf9d90ec1d3b97c4f513211905724c8171f82961
   ExpoHaptics: 807476b0c39e9d82b7270349d6487928ce32df84
   ExpoHead: 95a6ee0be1142320bccf07961d6a1502ded5d6ac
@@ -2467,6 +2498,7 @@ SPEC CHECKSUMS:
   React-Mapbuffer: fbe1da882a187e5898bdf125e1cc6e603d27ecae
   React-microtasksnativemodule: 76905804171d8ccbe69329fc84c57eb7934add7f
   react-native-blob-util: a8dc2c2b4b22a17a1122283e540a011a5ca7c63a
+  react-native-contacts: 5e4dd65fc98efcf029b83dacb5bc80a66b99c89d
   react-native-pdf: 70836b3b48595c7f85a3aa2b5d122b175c455733
   react-native-safe-area-context: 37e680fc4cace3c0030ee46e8987d24f5d3bdab2
   React-NativeModulesApple: a9464983ccc0f66f45e93558671f60fc7536e438
