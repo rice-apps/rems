@@ -8,6 +8,7 @@ import { Session } from '@supabase/supabase-js';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { supabase } from '@/lib/supabase';
 import LoginScreen from '@/components/login-screen';
+import { SessionContext } from '@/context/SessionContext';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -45,13 +46,15 @@ export default function RootLayout() {
   }
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-        <Stack.Screen name="special-maps-details" options={{ title: 'Special Building Details' }} />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    <SessionContext.Provider value={{ session }}>
+      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+        <Stack>
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+          <Stack.Screen name="special-maps-details" options={{ title: 'Special Building Details' }} />
+        </Stack>
+        <StatusBar style="auto" />
+      </ThemeProvider>
+    </SessionContext.Provider>
   );
 }
