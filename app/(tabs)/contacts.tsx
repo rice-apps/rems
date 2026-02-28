@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import * as Contacts from "expo-contacts";
 import { supabase } from "../../lib/supabase";
+import { Ionicons } from "@expo/vector-icons";
 
 // Type definitions
 interface Contact {
@@ -360,7 +361,20 @@ export default function Index() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>REMS Contacts</Text>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+          <Text style={styles.headerTitle}>REMS Contacts</Text>
+          <TouchableOpacity
+            onPress={() => {
+              Alert.alert("Sign Out", "Are you sure?", [
+                { text: "Cancel", style: "cancel" },
+                { text: "Sign Out", style: "destructive", onPress: () => supabase.auth.signOut() },
+              ]);
+            }}
+            style={{ padding: 6 }}
+          >
+            <Ionicons name="log-out-outline" size={24} color="#fff" />
+          </TouchableOpacity>
+        </View>
 
         <View style={styles.searchContainer}>
           <TextInput
