@@ -739,7 +739,7 @@ export default function Index() {
               {
                 borderBottomColor: weightBorderAnim.interpolate({
                   inputRange: [0, 1],
-                  outputRange: ["#e0e0e0", "#003686"],
+                  outputRange: ["#e0e0e0", "#1E40AF"],
                 }),
                 borderBottomWidth: weightBorderAnim.interpolate({
                   inputRange: [0, 1],
@@ -873,7 +873,7 @@ const styles = StyleSheet.create({
   weightInput: {
     flex: 1,
     fontSize: 16,
-    color: "#133465",
+    color: "#111111",
     fontWeight: "bold",
   },
   toggleContainerInside: {
@@ -906,7 +906,7 @@ const styles = StyleSheet.create({
   },
   toggleButtonActive: {
     backgroundColor: "transparent",
-    color: "#003686",
+    color: "#1E40AF",
     fontWeight: "600",
   },
   container: {
@@ -934,11 +934,11 @@ const styles = StyleSheet.create({
   picker: {
     width: "100%",
     height: 55,
-    color: "#133465",
+    color: "#111111",
   },
   pickerItem: {
     height: 120,
-    color: "#133465",
+    color: "#111111",
     fontWeight: "bold",
   },
   pickerButton: {
@@ -951,7 +951,7 @@ const styles = StyleSheet.create({
   },
   pickerButtonText: {
     fontSize: 16,
-    color: "#133465",
+    color: "#111111",
     fontWeight: "bold",
   },
   pickerButtonDisabled: {
@@ -987,7 +987,7 @@ const styles = StyleSheet.create({
   },
   modalDoneButton: {
     fontSize: 17,
-    color: "#007AFF",
+    color: "#1E40AF",
     fontWeight: "600",
   },
   result: {
@@ -1018,7 +1018,7 @@ const styles = StyleSheet.create({
   dosageText: {
     fontSize: 24,
     fontWeight: "bold",
-    color: "#003686",
+    color: "#111111",
     backgroundColor: "white",
     textAlign: "center",
   },

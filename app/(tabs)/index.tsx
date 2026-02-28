@@ -369,7 +369,7 @@ export default function SearchScreen() {
 
             {!searchEngineReady && (
               <View style={styles.initializingBanner}>
-                <ActivityIndicator size="small" color="#007AFF" />
+                <ActivityIndicator size="small" color="#1E40AF" />
                 <Text style={styles.initializingText}>
                   Initializing search engine...
                 </Text>
@@ -520,7 +520,7 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     fontSize: 48,
     letterSpacing: 2,
-    color: Colors.light.tint,
+    color: Colors.light.primary,
     fontWeight: "800",
   },
   searchIcon: {
@@ -535,7 +535,7 @@ const styles = StyleSheet.create({
   searchButton: {
     paddingHorizontal: 24,
     height: 48,
-    backgroundColor: "#007AFF",
+    backgroundColor: "#1E40AF",
     borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
@@ -561,7 +561,7 @@ const styles = StyleSheet.create({
     marginTop: 60,
     marginHorizontal: 16,
     padding: 12,
-    backgroundColor: "#007AFF",
+    backgroundColor: "#1E40AF",
     borderRadius: 12,
     alignItems: "center",
 
@@ -624,7 +624,7 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     fontSize: 20,
-    color: "#007AFF",
+    color: "#1E40AF",
     fontWeight: "600",
   },
   backButtonPlaceholder: {
@@ -701,7 +701,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "#007AFF",
+    backgroundColor: "#1E40AF",
     padding: 12,
     borderRadius: 8,
     marginTop: 12,
@@ -762,7 +762,7 @@ const styles = StyleSheet.create({
   },
   bookmarkPage: {
     fontSize: 14,
-    color: '#007AFF',
+    color: '#1E40AF',
     fontWeight: '500',
   },
   // OLD HOMEPAGE STYLES
@@ -931,7 +931,7 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 8,
-    backgroundColor: Colors.light.tint,
+    backgroundColor: Colors.light.primary,
     justifyContent: "center",
     alignItems: "center",
     marginRight: 12,
@@ -965,7 +965,7 @@ const styles = StyleSheet.create({
   },
   seeMoreText: {
     fontSize: 14,
-    color: Colors.light.tint,
+    color: Colors.light.primary,
     fontWeight: "500",
   },
   recommendedContent: {
@@ -981,7 +981,7 @@ const styles = StyleSheet.create({
     height: 28,
     borderRadius: 6,
     borderWidth: 2,
-    borderColor: Colors.light.tint,
+    borderColor: Colors.light.primary,
     justifyContent: "center",
     alignItems: "center",
     marginRight: 12,

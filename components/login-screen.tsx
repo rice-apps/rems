@@ -95,13 +95,13 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#faf9f7",
+    backgroundColor: "#F5F5F5",
     alignItems: "center",
     justifyContent: "center",
     padding: 24,
   },
   card: {
-    backgroundColor: "#fff",
+    backgroundColor: "#FFFFFF",
     borderRadius: 16,
     padding: 32,
     width: "100%",
@@ -116,12 +116,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: "300",
-    color: "#0f172a",
+    color: "#111111",
     marginBottom: 4,
   },
   subtitle: {
     fontSize: 15,
-    color: "#94a3b8",
+    color: "#999999",
     marginBottom: 28,
   },
   errorBox: {
@@ -134,12 +134,12 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   errorText: {
-    color: "#be123c",
+    color: "#EF4444",
     fontSize: 14,
     textAlign: "center",
   },
   button: {
-    backgroundColor: "#1e3a5f",
+    backgroundColor: "#1E40AF",
     borderRadius: 10,
     paddingVertical: 14,
     paddingHorizontal: 24,

@@ -252,7 +252,7 @@ export default function SearchScreen() {
 
         {!searchEngineReady && (
           <View style={styles.initializingBanner}>
-            <ActivityIndicator size="small" color="#007AFF" />
+            <ActivityIndicator size="small" color="#1E40AF" />
             <Text style={styles.initializingText}>
               Initializing search engine...
             </Text>
@@ -397,7 +397,7 @@ const styles = StyleSheet.create({
   searchButton: {
     paddingHorizontal: 24,
     height: 48,
-    backgroundColor: "#007AFF",
+    backgroundColor: "#1E40AF",
     borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
@@ -465,7 +465,7 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     fontSize: 16,
-    color: "#007AFF",
+    color: "#1E40AF",
     fontWeight: "600",
   },
   backButtonPlaceholder: {
@@ -542,7 +542,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "#007AFF",
+    backgroundColor: "#1E40AF",
     padding: 12,
     borderRadius: 8,
     marginTop: 12,

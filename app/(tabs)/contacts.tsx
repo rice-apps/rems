@@ -392,7 +392,7 @@ export default function Index() {
           disabled={isAddingContacts}
         >
           {isAddingContacts ? (
-            <ActivityIndicator color="#003C7D" />
+            <ActivityIndicator color="#1E40AF" />
           ) : (
             <Text style={styles.addAllButtonText}>+ Add All Contacts</Text>
           )}
@@ -408,7 +408,7 @@ export default function Index() {
 
         {isLoading ? (
           <View style={styles.noResultsContainer}>
-            <ActivityIndicator size="large" color="#133465" />
+            <ActivityIndicator size="large" color="#1E40AF" />
           </View>
         ) : loadError ? (
           <View style={styles.noResultsContainer}>
@@ -434,7 +434,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#F5F5F5",
   },
   header: {
-    backgroundColor: "#133465",
+    backgroundColor: "#111111",
     paddingTop: 60,
     paddingBottom: 20,
     paddingHorizontal: 20,
@@ -454,7 +454,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 20,
     fontSize: 16,
-    color: "#333333",
+    color: "#111111",
   },
   addAllButton: {
     backgroundColor: "#FFFFFF",
@@ -464,7 +464,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   addAllButtonText: {
-    color: "#133465",
+    color: "#111111",
     fontSize: 16,
     fontWeight: "600",
   },
@@ -478,7 +478,7 @@ const styles = StyleSheet.create({
   quickAccessTitle: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#333333",
+    color: "#111111",
     marginBottom: 12,
   },
   quickAccessButtons: {
@@ -487,7 +487,7 @@ const styles = StyleSheet.create({
   },
   quickAccessButton: {
     flex: 1,
-    backgroundColor: "#FF6B6B",
+    backgroundColor: "#1E40AF",
     borderRadius: 16,
     padding: 16,
     alignItems: "center",
@@ -517,11 +517,11 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "#E0E0E0",
+    borderColor: "#E5E5E5",
   },
   filterChipActive: {
-    backgroundColor: "#003C7D",
-    borderColor: "#003C7D",
+    backgroundColor: "#1E40AF",
+    borderColor: "#1E40AF",
   },
   filterText: {
     fontSize: 14,
@@ -544,10 +544,10 @@ const styles = StyleSheet.create({
   categoryTitle: {
     fontSize: 20,
     fontWeight: "700",
-    color: "#333333",
+    color: "#111111",
   },
   batchAddButton: {
-    backgroundColor: "#133465",
+    backgroundColor: "#1E40AF",
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 20,
@@ -579,7 +579,7 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   individualAddButton: {
-    backgroundColor: "#133465",
+    backgroundColor: "#1E40AF",
     width: 40,
     height: 40,
     borderRadius: 20,
@@ -594,7 +594,7 @@ const styles = StyleSheet.create({
   contactName: {
     fontSize: 18,
     fontWeight: "600",
-    color: "#133465",
+    color: "#111111",
     marginBottom: 4,
   },
   contactPhone: {
@@ -618,7 +618,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   clearanceBadge: {
-    backgroundColor: "#E8F4F8",
+    backgroundColor: "#DBEAFE",
     paddingVertical: 4,
     paddingHorizontal: 8,
     borderRadius: 8,
@@ -626,7 +626,7 @@ const styles = StyleSheet.create({
   clearanceText: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#003C7D",
+    color: "#1E3A8A",
   },
   noResultsContainer: {
     alignItems: "center",
