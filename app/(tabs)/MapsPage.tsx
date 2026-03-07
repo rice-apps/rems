@@ -125,7 +125,6 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingTop: Platform.OS === 'ios' ? 64 : 44,
-    paddingHorizontal: 20,
     paddingBottom: 20,
   },
   headerBrand: {

@@ -44,27 +44,6 @@ interface DrugPermission {
   inchargeOnly?: boolean;
 }
 
-const DRUG_PERMISSIONS: Record<string, DrugPermission> = {
-  // Requires Medical Command approval — always, even for incharges
-  epinephrine:        { minLevel: CLEARANCE_HIERARCHY.ALS, approval: "Requires Medical Command approval" },
-  // Incharge-only drugs — non-incharges see "above your clearance"
-  amiodarone:         { minLevel: CLEARANCE_HIERARCHY.ALS, inchargeOnly: true },
-  calcium_chloride:   { minLevel: CLEARANCE_HIERARCHY.ALS, inchargeOnly: true },
-  sodium_bicarbonate: { minLevel: CLEARANCE_HIERARCHY.ALS, inchargeOnly: true },
-  nitroglycerin:      { minLevel: CLEARANCE_HIERARCHY.ALS, inchargeOnly: true },
-  // ALS drugs — allowed but need Incharge approval
-  dextrose:           { minLevel: CLEARANCE_HIERARCHY.ALS, approval: "Requires Incharge approval" },
-  narcan:             { minLevel: CLEARANCE_HIERARCHY.ALS, approval: "Requires Incharge approval" },
-  diphenhydramine:    { minLevel: CLEARANCE_HIERARCHY.ALS, approval: "Requires Incharge approval" },
-  methylprednisolone: { minLevel: CLEARANCE_HIERARCHY.ALS, approval: "Requires Incharge approval" },
-  glucagon:           { minLevel: CLEARANCE_HIERARCHY.ALS, approval: "Requires Incharge approval" },
-  claritin:           { minLevel: CLEARANCE_HIERARCHY.ALS, approval: "Requires Incharge approval" },
-  // BLS drugs — allowed but need Incharge approval
-  oral_glucose:       { minLevel: CLEARANCE_HIERARCHY.BLS, approval: "Requires Incharge approval" },
-  aspirin:            { minLevel: CLEARANCE_HIERARCHY.BLS, approval: "Requires Incharge approval" },
-  albuterol:          { minLevel: CLEARANCE_HIERARCHY.BLS, approval: "Requires Incharge approval" },
-};
-
 function getUserClearanceLevel(clearances: string[]): { level: number; key: string } {
   let highest = { level: -1, key: "OBS" };
   for (const c of clearances) {
@@ -505,12 +484,31 @@ export default function Index() {
   // Clearance state
   const [userClearance, setUserClearance] = useState<{ level: number; key: string } | null>(null);
   const [isIncharge, setIsIncharge] = useState(false);
+  const [drugPermissions, setDrugPermissions] = useState<Record<string, DrugPermission>>({});
   const [clearanceLoading, setClearanceLoading] = useState(true);
 
-  // Fetch user clearance and category from contacts table
+  // Fetch user clearance, category, and drug permissions from Supabase
   useEffect(() => {
-    const fetchClearance = async () => {
+    const fetchData = async () => {
       const email = session?.user?.email;
+
+      // Fetch drug permissions (always, even without a session)
+      const { data: permsData } = await supabase
+        .from("drug_permissions")
+        .select("drug_value, min_level, approval, incharge_only");
+
+      if (permsData) {
+        const permsMap: Record<string, DrugPermission> = {};
+        for (const row of permsData) {
+          permsMap[row.drug_value] = {
+            minLevel: row.min_level,
+            approval: row.approval ?? undefined,
+            inchargeOnly: row.incharge_only,
+          };
+        }
+        setDrugPermissions(permsMap);
+      }
+
       if (!email) {
         setClearanceLoading(false);
         return;
@@ -540,7 +538,7 @@ export default function Index() {
       }
     };
 
-    fetchClearance();
+    fetchData();
   }, [session]);
 
   // All drugs visible to everyone
@@ -556,7 +554,7 @@ export default function Index() {
   // Approval warning adjusts based on clearance level and incharge status
   const getApprovalNote = (drugValue: string): string | undefined => {
     if (!userClearance) return undefined;
-    const perm = DRUG_PERMISSIONS[drugValue];
+    const perm = drugPermissions[drugValue];
     if (!perm) return undefined;
 
     // Medical Command approval is always required regardless of level
