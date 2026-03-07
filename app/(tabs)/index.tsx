@@ -63,6 +63,25 @@ export default function HomeScreen() {
   const [showAccountModal, setShowAccountModal] = useState(false);
   const [phone, setPhone] = useState(userMeta?.phone || "");
   const [savingPhone, setSavingPhone] = useState(false);
+  const [userClearances, setUserClearances] = useState<string[]>([]);
+
+  useEffect(() => {
+    const fetchClearance = async () => {
+      const email = session?.user?.email;
+      if (!email) return;
+      try {
+        const { data } = await supabase
+          .from("contacts")
+          .select("clearances")
+          .ilike("email", email.toLowerCase())
+          .single();
+        if (data?.clearances?.length) {
+          setUserClearances(data.clearances);
+        }
+      } catch {}
+    };
+    fetchClearance();
+  }, [session]);
 
   const handleSavePhone = async () => {
     setSavingPhone(true);
@@ -411,6 +430,15 @@ export default function HomeScreen() {
               )}
               <Text style={styles.accountName}>{fullName || "User"}</Text>
               <Text style={styles.accountEmail}>{session?.user?.email || ""}</Text>
+              {userClearances.length > 0 && (
+                <View style={styles.clearanceRow}>
+                  {userClearances.map((c) => (
+                    <View key={c} style={styles.clearanceBadge}>
+                      <Text style={styles.clearanceBadgeText}>{c}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
             </View>
 
             {/* Phone field */}
@@ -726,6 +754,22 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#666",
     marginTop: 4,
+  },
+  clearanceRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 10,
+  },
+  clearanceBadge: {
+    backgroundColor: Colors.light.primaryLight,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 8,
+  },
+  clearanceBadgeText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: Colors.light.primary,
   },
   accountField: {
     width: "100%",

@@ -10,9 +10,72 @@ import {
   Animated,
   Modal,
   TouchableOpacity,
+  ActivityIndicator,
 } from "react-native";
 
 import { Picker } from "@react-native-picker/picker";
+import { useSession } from "@/context/SessionContext";
+import { supabase } from "@/lib/supabase";
+
+// ============================================================================
+// CLEARANCE LEVELS
+// ============================================================================
+
+const CLEARANCE_HIERARCHY: Record<string, number> = {
+  OBS: 0,   // Observer
+  BLS: 1,   // EMT / Basic Life Support
+  SE: 2,    // AEMT / Special Events
+  ALS: 3,   // Advanced Life Support
+  IC: 4,    // Incharge
+  PM: 5,    // Paramedic
+};
+
+const CLEARANCE_LABELS: Record<string, string> = {
+  OBS: "Observer",
+  BLS: "EMT",
+  SE: "AEMT",
+  ALS: "ALS",
+  IC: "Incharge",
+  PM: "Paramedic",
+};
+
+interface DrugPermission {
+  minLevel: number;
+  approval?: string;
+}
+
+const DRUG_PERMISSIONS: Record<string, DrugPermission> = {
+  // Requires Medical Command approval
+  epinephrine:        { minLevel: CLEARANCE_HIERARCHY.ALS, approval: "Requires Medical Command approval" },
+  // Incharge-only drugs
+  amiodarone:         { minLevel: CLEARANCE_HIERARCHY.IC },
+  calcium_chloride:   { minLevel: CLEARANCE_HIERARCHY.IC },
+  sodium_bicarbonate: { minLevel: CLEARANCE_HIERARCHY.IC },
+  nitroglycerin:      { minLevel: CLEARANCE_HIERARCHY.IC },
+  // ALS drugs — allowed but need Incharge approval
+  dextrose:           { minLevel: CLEARANCE_HIERARCHY.ALS, approval: "Requires Incharge approval" },
+  narcan:             { minLevel: CLEARANCE_HIERARCHY.ALS, approval: "Requires Incharge approval" },
+  diphenhydramine:    { minLevel: CLEARANCE_HIERARCHY.ALS, approval: "Requires Incharge approval" },
+  methylprednisolone: { minLevel: CLEARANCE_HIERARCHY.ALS, approval: "Requires Incharge approval" },
+  glucagon:           { minLevel: CLEARANCE_HIERARCHY.ALS, approval: "Requires Incharge approval" },
+  claritin:           { minLevel: CLEARANCE_HIERARCHY.ALS, approval: "Requires Incharge approval" },
+  // BLS drugs — allowed but need Incharge approval
+  oral_glucose:       { minLevel: CLEARANCE_HIERARCHY.BLS, approval: "Requires Incharge approval" },
+  aspirin:            { minLevel: CLEARANCE_HIERARCHY.BLS, approval: "Requires Incharge approval" },
+  albuterol:          { minLevel: CLEARANCE_HIERARCHY.BLS, approval: "Requires Incharge approval" },
+};
+
+function getUserClearanceLevel(clearances: string[]): { level: number; key: string } {
+  let highest = { level: -1, key: "OBS" };
+  for (const c of clearances) {
+    const upper = c.toUpperCase();
+    const level = CLEARANCE_HIERARCHY[upper];
+    if (level !== undefined && level > highest.level) {
+      highest = { level, key: upper };
+    }
+  }
+  return highest.level >= 0 ? highest : { level: 0, key: "OBS" };
+}
 
 // ============================================================================
 // DRUG CONFIGURATION DATA
@@ -176,17 +239,15 @@ const DRUG_DATABASE: DrugConfig[] = [
     },
   },
   {
-    label: "Dextrose 10% (D10)",
-    value: "d10",
+    label: "Dextrose",
+    value: "dextrose",
     routes: [
-      {
-        label:
-          "IV/IO piggyback drip or extension set; macro drip, drip wide open until response",
-        value: "iv_io",
-      },
+      { label: "D10 IV/IO (drip wide open until response)", value: "d10_iv" },
+      { label: "D25 slow IV/IO", value: "d25_iv" },
+      { label: "D50 slow IV/IO", value: "d50_iv" },
     ],
     dosages: {
-      iv_io: {
+      d10_iv: {
         pediatric: {
           formula: (weight) => 5 * weight,
           max: 250,
@@ -200,41 +261,25 @@ const DRUG_DATABASE: DrugConfig[] = [
           notes: "Stop when BGL > 60 mg/dL and patient improves",
         },
       },
-    },
-  },
-  {
-    label: "Dextrose 25% (D25)",
-    value: "d25",
-    routes: [{ label: "slow IV/IO", value: "iv_io" }],
-    dosages: {
-      iv_io: {
+      d25_iv: {
         pediatric: {
           formula: (weight) => 2 * weight,
           max: 100,
           unit: "mL",
-          notes:
-            "max is 50-100 mL depending on page variant; commonly used for <25 kg.",
+          notes: "Commonly used for <25 kg",
         },
         adult: {
           formula: (weight) => 2 * weight,
           max: 100,
           unit: "mL",
-          notes: "alternative to D10/D50 when indicated.",
         },
       },
-    },
-  },
-  {
-    label: "Dextrose 50% (D50)",
-    value: "d50",
-    routes: [{ label: "slow IV/IO", value: "iv_io" }],
-    dosages: {
-      iv_io: {
+      d50_iv: {
         pediatric: {
           formula: (weight) => 1 * weight,
           max: 50,
           unit: "mL",
-          notes: "use caution",
+          notes: "Use caution",
         },
         adult: {
           formula: (weight) => 1 * weight,
@@ -455,15 +500,64 @@ function calculateDosage(
 // ============================================================================
 
 export default function Index() {
+  const { session } = useSession();
+
+  // Clearance state
+  const [userClearance, setUserClearance] = useState<{ level: number; key: string } | null>(null);
+  const [clearanceLoading, setClearanceLoading] = useState(true);
+
+  // Fetch user clearance from contacts table
+  useEffect(() => {
+    const fetchClearance = async () => {
+      const email = session?.user?.email;
+      if (!email) {
+        setClearanceLoading(false);
+        return;
+      }
+
+      try {
+        const { data } = await supabase
+          .from("contacts")
+          .select("clearances")
+          .ilike("email", email.toLowerCase())
+          .single();
+
+        if (data?.clearances?.length) {
+          setUserClearance(getUserClearanceLevel(data.clearances));
+        } else {
+          setUserClearance({ level: 0, key: "OBS" });
+        }
+      } catch {
+        setUserClearance({ level: 0, key: "OBS" });
+      } finally {
+        setClearanceLoading(false);
+      }
+    };
+
+    fetchClearance();
+  }, [session]);
+
+  // Filter drugs based on clearance
+  const allowedDrugs = DRUG_DATABASE.filter((drug) => {
+    if (!userClearance) return false;
+    const perm = DRUG_PERMISSIONS[drug.value];
+    if (!perm) return true;
+    return userClearance.level >= perm.minLevel;
+  });
+
+  const drugItems = allowedDrugs.map((drug) => ({
+    label: drug.label,
+    value: drug.value,
+  }));
+
   // Drug dropdown
   const [selectedDrug, setSelectedDrug] = useState<string | null>(null);
   const [showDrugPicker, setShowDrugPicker] = useState(false);
-  const [drugItems] = useState(
-    DRUG_DATABASE.map((drug) => ({
-      label: drug.label,
-      value: drug.value,
-    }))
-  );
+
+  // Get approval warning for selected drug
+  const selectedDrugApproval = selectedDrug
+    ? DRUG_PERMISSIONS[selectedDrug]?.approval
+    : undefined;
 
   // Route dropdown
   const [selectedRoute, setSelectedRoute] = useState<string | null>(null);
@@ -609,8 +703,37 @@ export default function Index() {
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Dosage Calculator</Text>
+          {userClearance && (
+            <View style={styles.clearanceBadge}>
+              <Text style={styles.clearanceBadgeText}>
+                {CLEARANCE_LABELS[userClearance.key] || userClearance.key}
+              </Text>
+            </View>
+          )}
         </View>
 
+        {/* Loading state */}
+        {clearanceLoading && (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="small" color="#1E40AF" />
+            <Text style={styles.loadingText}>Loading clearance...</Text>
+          </View>
+        )}
+
+        {/* Observer — no drugs available */}
+        {!clearanceLoading && userClearance?.level === 0 && (
+          <View style={styles.observerCard}>
+            <Text style={styles.observerTitle}>Observer Access</Text>
+            <Text style={styles.observerText}>
+              Observers can only administer oxygen. No drug dosage calculations
+              are available for this clearance level.
+            </Text>
+          </View>
+        )}
+
+        {/* Calculator — only if user has drug access */}
+        {!clearanceLoading && userClearance && userClearance.level > 0 && (
+          <>
         {/* Result Card */}
         <Animated.View
           style={[
@@ -634,6 +757,11 @@ export default function Index() {
           >
             {dosage || "—"}
           </Animated.Text>
+          {selectedDrugApproval && dosage ? (
+            <View style={styles.approvalBanner}>
+              <Text style={styles.approvalBannerText}>{selectedDrugApproval}</Text>
+            </View>
+          ) : null}
         </Animated.View>
 
         {/* Form */}
@@ -655,6 +783,11 @@ export default function Index() {
             </Text>
             <Text style={styles.pickerChevron}>›</Text>
           </TouchableOpacity>
+          {selectedDrugApproval && !dosage ? (
+            <View style={styles.approvalNote}>
+              <Text style={styles.approvalNoteText}>{selectedDrugApproval}</Text>
+            </View>
+          ) : null}
 
           <Text style={styles.label}>Route of Administration</Text>
           <TouchableOpacity
@@ -754,6 +887,8 @@ export default function Index() {
             <Text style={styles.pickerChevron}>›</Text>
           </TouchableOpacity>
         </View>
+          </>
+        )}
       </ScrollView>
 
       {/* Picker Modals */}
@@ -862,6 +997,9 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingTop: Platform.OS === "ios" ? 64 : 44,
     paddingHorizontal: 20,
     paddingBottom: 16,
@@ -871,6 +1009,74 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: "#1E40AF",
     letterSpacing: 0.5,
+  },
+  clearanceBadge: {
+    backgroundColor: "#DBEAFE",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  clearanceBadgeText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#1E40AF",
+  },
+  loadingContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+    gap: 8,
+  },
+  loadingText: {
+    fontSize: 14,
+    color: "#888",
+  },
+  observerCard: {
+    marginHorizontal: 20,
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: "#E5E5E5",
+    alignItems: "center",
+  },
+  observerTitle: {
+    fontSize: 17,
+    fontWeight: "700",
+    color: "#333",
+    marginBottom: 8,
+  },
+  observerText: {
+    fontSize: 14,
+    color: "#888",
+    textAlign: "center",
+    lineHeight: 20,
+  },
+  approvalBanner: {
+    backgroundColor: "#FEF3C7",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    marginTop: 12,
+  },
+  approvalBannerText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#92400E",
+  },
+  approvalNote: {
+    backgroundColor: "#FEF3C7",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginTop: -8,
+    marginBottom: 16,
+  },
+  approvalNoteText: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: "#92400E",
   },
   resultCard: {
     marginHorizontal: 20,
