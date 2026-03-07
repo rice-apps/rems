@@ -174,6 +174,9 @@ export default function HomeScreen() {
   };
 
   const jumpToPage = (pageNumber: number) => {
+    setSearchQuery("");
+    setSearchResults(bookmarks);
+    setRecommendations([]);
     router.replace({
       pathname: "/(tabs)/Search",
       params: {
@@ -203,45 +206,29 @@ export default function HomeScreen() {
       );
     }
 
-    const isHighRelevance = item.relevance > 0.7;
-    const isMediumRelevance = item.relevance > 0.5;
-
     return (
-      <View
-        style={[
-          styles.resultCard,
-          isHighRelevance && styles.resultCardHighRelevance,
-          isMediumRelevance && !isHighRelevance && styles.resultCardMediumRelevance,
-        ]}
+      <TouchableOpacity
+        style={styles.resultCard}
+        onPress={() => {
+          setShowSearchModal(false);
+          jumpToPage(item.page);
+        }}
+        activeOpacity={0.7}
       >
-        <View style={styles.resultTitleSection}>
-          {item.title ? (
+        <View style={styles.resultCardTop}>
+          <View style={{ flex: 1 }}>
             <Text style={styles.resultTitle} numberOfLines={2}>
-              {item.title}
+              {item.title || item.section}
             </Text>
-          ) : (
-            <Text style={styles.resultSection} numberOfLines={2}>
-              {item.section}
+            <Text style={styles.resultPreview} numberOfLines={2}>
+              {item.text}
             </Text>
-          )}
+          </View>
+          <View style={styles.resultPageBadge}>
+            <Text style={styles.resultPageBadgeText}>p.{item.page}</Text>
+          </View>
         </View>
-
-        <Text style={styles.resultPreview} numberOfLines={3}>
-          {item.text}
-        </Text>
-
-        <TouchableOpacity
-          style={styles.pageButton}
-          onPress={() => {
-            setShowSearchModal(false);
-            jumpToPage(item.page);
-          }}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.pageButtonText}>Page {item.page}</Text>
-          <Text style={styles.pageButtonArrow}>→</Text>
-        </TouchableOpacity>
-      </View>
+      </TouchableOpacity>
     );
   };
 
@@ -325,6 +312,9 @@ export default function HomeScreen() {
                   Keyboard.dismiss();
                   setIsFocused(false);
                   setShowSearchModal(false);
+                  setSearchQuery("");
+                  setSearchResults(bookmarks);
+                  setRecommendations([]);
                 }}
                 style={styles.backButton}
               >
@@ -635,66 +625,38 @@ const styles = StyleSheet.create({
   resultCard: {
     backgroundColor: "#fff",
     borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 2,
-    borderColor: "#e0e0e0",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
+    padding: 14,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: Colors.light.border,
   },
-  resultCardHighRelevance: {
-    borderColor: "#34C759",
-    backgroundColor: "#f8fff9",
-  },
-  resultCardMediumRelevance: {
-    borderColor: "#FF9500",
-    backgroundColor: "#fffaf5",
-  },
-  resultTitleSection: {
-    marginBottom: 8,
-  },
-  resultTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#333",
-    lineHeight: 22,
-  },
-  resultSection: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#555",
-    lineHeight: 21,
-  },
-  resultPreview: {
-    fontSize: 14,
-    color: "#666",
-    lineHeight: 20,
-    marginBottom: 12,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
-  },
-  pageButton: {
+  resultCardTop: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: "#1E40AF",
-    padding: 12,
-    borderRadius: 8,
-    marginTop: 12,
   },
-  pageButtonText: {
+  resultTitle: {
     fontSize: 15,
     fontWeight: "600",
-    color: "#fff",
+    color: "#333",
+    lineHeight: 20,
   },
-  pageButtonArrow: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#fff",
+  resultPreview: {
+    fontSize: 13,
+    color: "#888",
+    lineHeight: 18,
+    marginTop: 4,
+  },
+  resultPageBadge: {
+    backgroundColor: Colors.light.primaryLight,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    marginLeft: 12,
+  },
+  resultPageBadgeText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: Colors.light.primary,
   },
   bookmarkCard: {
     flexDirection: "row",
