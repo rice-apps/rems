@@ -1,23 +1,12 @@
 import { Image } from 'expo-image';
-import { ScrollView, StyleSheet, Modal, Pressable } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Modal, Pressable } from 'react-native';
 import { useLocalSearchParams, Stack } from 'expo-router';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
 import { useState } from 'react';
 
 export default function CollegeDetailScreen() {
   const { college } = useLocalSearchParams<{ college: string }>();
-  const GeneralMapInfo = () => (
-  <ThemedText style={styles.footnoteText}>
-    Room numbers are denoted by white text inside black boxes.{'\n'}
-    Stairwells are marked by the <Image source={require('@/assets/images/stairwell.jpg')} style={styles.stairwellIcon} /> icon.{'\n'}
-    Elevators and construction hazards are shown above the map image.{'\n'}
-    Miscellaneous notes are shown below the map image.{'\n'}
-    MH stands for Magister's House.
-  </ThemedText>
-);
+  const [zoomed, setZoomed] = useState(false);
 
-  // Map college names to their images and footnotes
   const collegeData: Record<string, { image: any; footnote: string }> = {
     'Baker College': {
       image: require('@/assets/images/maps/baker-map.jpg'),
@@ -33,7 +22,7 @@ export default function CollegeDetailScreen() {
     },
     'Hanszen College': {
       image: require('@/assets/images/maps/hanszen-map.jpg'),
-      footnote: 'Buildings: 2\nElevators: 1\nParking for New Hanszen is tricky because it’s in the middle of nowhere but inner loop is typically best',
+      footnote: "Buildings: 2\nElevators: 1\nParking for New Hanszen is tricky because it\u2019s in the middle of nowhere but inner loop is typically best",
     },
     'Jones College': {
       image: require('@/assets/images/maps/jones-map.jpg'),
@@ -41,7 +30,7 @@ export default function CollegeDetailScreen() {
     },
     'Lovett College': {
       image: require('@/assets/images/maps/lovett-map.jpg'),
-      footnote: 'Buildings: 2\nElevators: 1\nThe primary “toaster” building has 6 floors, but only the first 5 are accessible by elevator\nThe Lovett basement is accessible by elevator and is under the “toaster” building\nThe Lovett elevator is not large enough to fit a stretcher, but can fit a stair chair',
+      footnote: 'Buildings: 2\nElevators: 1\nThe primary "toaster" building has 6 floors, but only the first 5 are accessible by elevator\nThe Lovett basement is accessible by elevator and is under the "toaster" building\nThe Lovett elevator is not large enough to fit a stretcher, but can fit a stair chair',
     },
     'Martel College': {
       image: require('@/assets/images/maps/martel-map.jpg'),
@@ -66,105 +55,95 @@ export default function CollegeDetailScreen() {
   };
 
   const data = collegeData[college];
-  const image = collegeData[college].image;
-  const [zoomed, setZoomed] = useState(false);
+  const image = data?.image;
 
   return (
-    <ThemedView style={styles.container}>
+    <View style={styles.container}>
       <Stack.Screen options={{ title: college }} />
-      
+
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* {data?.image && (
-          <Image
-            source={data.image}
-            style={styles.mapImage}
-            contentFit="contain"
-          />
-        )} */}
         {image && (
           <Pressable onPress={() => setZoomed(true)}>
-            <Image
-              source={image}
-              style={styles.mapImage}
-              contentFit="contain"
-            />
+            <Image source={image} style={styles.mapImage} contentFit="contain" />
+            <Text style={styles.tapHint}>Tap to zoom</Text>
           </Pressable>
         )}
-        
-        <ThemedView>
-          <ThemedText style={styles.footnoteTitle}>Relevant Information</ThemedText>
-          <ThemedText style={styles.footnoteText}>{data?.footnote}</ThemedText>
-          
-        </ThemedView>
-        <ThemedText style={styles.generalInfoTitle}>General Map Information</ThemedText>
-        <ThemedText style={styles.footnoteText}>
-          Room numbers are denoted by white text inside black boxes.{'\n'}
-          Stairwells are marked by the <Image source={require('@/assets/images/stairwell.jpg')} style={styles.stairwellIcon} /> icon.{'\n'}
-          Elevators and construction hazards are shown above the map image.{'\n'}
-          Miscellaneous notes are shown below the map image.{'\n'}
-          MH stands for Magister's House.
-        </ThemedText>
+
+        <View style={styles.infoCard}>
+          <Text style={styles.infoTitle}>Details</Text>
+          <Text style={styles.infoText}>{data?.footnote}</Text>
+        </View>
+
+        <View style={styles.infoCard}>
+          <Text style={styles.infoTitle}>Map Legend</Text>
+          <Text style={styles.infoText}>
+            Room numbers are denoted by white text inside black boxes.{'\n'}
+            Stairwells are marked by the stairwell icon.{'\n'}
+            Elevators and construction hazards are shown above the map image.{'\n'}
+            MH stands for Magister's House.
+          </Text>
+        </View>
       </ScrollView>
-      {/* Fullscreen zoom modal */}
+
       <Modal visible={zoomed} transparent animationType="fade" onRequestClose={() => setZoomed(false)}>
         <Pressable style={styles.zoomOverlay} onPress={() => setZoomed(false)}>
-          {image && (
-            <Image source={image} style={styles.zoomImage} contentFit="contain" />
-          )}
+          {image && <Image source={image} style={styles.zoomImage} contentFit="contain" />}
         </Pressable>
       </Modal>
-    </ThemedView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#f8f9fa',
   },
   scrollContent: {
-    padding: 20,
+    padding: 16,
+    paddingBottom: 40,
   },
   mapImage: {
     width: '100%',
-    height: 400,
+    height: 350,
     borderRadius: 12,
-    marginBottom: 20,
+    backgroundColor: '#fff',
   },
-  footnoteContainer: {
-    padding: 20,
-    backgroundColor: '#f5f5f5',
+  tapHint: {
+    fontSize: 12,
+    color: '#999',
+    textAlign: 'center',
+    marginTop: 6,
+    marginBottom: 16,
+  },
+  infoCard: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
     borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
   },
-  footnoteTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 10,
+  infoTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#333',
+    marginBottom: 8,
   },
-  footnoteText: {
-    fontSize: 16,
-    lineHeight: 24,
-  },
-  generalInfoTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginTop: 20,
-    marginBottom: 10,
-  },
-  stairwellIcon: {
-    width: 16,
-    height: 16,
-    resizeMode: 'contain',
+  infoText: {
+    fontSize: 14,
+    color: '#666',
+    lineHeight: 22,
   },
   zoomOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.9)',
+    backgroundColor: 'rgba(0,0,0,0.92)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: 16,
   },
   zoomImage: {
     width: '100%',
     height: '80%',
-    borderRadius: 12,
   },
 });

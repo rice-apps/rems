@@ -48,10 +48,13 @@ export default function RootLayout() {
   return (
     <SessionContext.Provider value={{ session }}>
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <Stack>
+        <Stack screenOptions={{ headerBackTitle: 'Back' }}>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-          <Stack.Screen name="special-maps-details" options={{ title: 'Special Building Details' }} />
+          <Stack.Screen name="special-maps-details" options={{ title: 'Details' }} />
+          <Stack.Screen name="college-map-details" options={{ title: 'Details' }} />
+          <Stack.Screen name="college-list" options={{ title: 'Residential Colleges' }} />
+          <Stack.Screen name="special-buildings-list" options={{ title: 'Special Buildings' }} />
         </Stack>
         <StatusBar style="auto" />
       </ThemeProvider>

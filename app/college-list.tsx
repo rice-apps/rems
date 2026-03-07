@@ -1,9 +1,7 @@
 import { Image } from 'expo-image';
-import { TouchableOpacity, StyleSheet, FlatList } from 'react-native';
-import { router } from 'expo-router';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { IconSymbol } from '@/components/ui/icon-symbol';
+import { View, Text, TouchableOpacity, StyleSheet, FlatList } from 'react-native';
+import { router, Stack } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 
 const COLLEGE_IMAGES: Record<string, any> = {
   'Baker College': require('@/assets/images/baker-college.png'),
@@ -19,116 +17,78 @@ const COLLEGE_IMAGES: Record<string, any> = {
   'Will Rice College': require('@/assets/images/wrc-college.png'),
 };
 
-export default function MapsPage() {
-  const colleges = [
-    { id: '7', name: 'Baker College'},
-    { id: '8', name: 'Brown College'},
-    { id: '9', name: 'Duncan College'},
-    { id: '10', name: 'Hanszen College'},
-    { id: '11', name: 'Jones College'},
-    { id: '12', name: 'Lovett College'},
-    { id: '13', name: 'Martel College'},
-    { id: '14', name: 'McMurtry College'},
-    { id: '15', name: 'Sid Richardson College'},
-    { id: '16', name: 'Wiess College'},
-    { id: '17', name: 'Will Rice College'},
-  ];
+const colleges = [
+  { id: '7', name: 'Baker College' },
+  { id: '8', name: 'Brown College' },
+  { id: '9', name: 'Duncan College' },
+  { id: '10', name: 'Hanszen College' },
+  { id: '11', name: 'Jones College' },
+  { id: '12', name: 'Lovett College' },
+  { id: '13', name: 'Martel College' },
+  { id: '14', name: 'McMurtry College' },
+  { id: '15', name: 'Sid Richardson College' },
+  { id: '16', name: 'Wiess College' },
+  { id: '17', name: 'Will Rice College' },
+];
 
-  const handleLocationPress = (item: { id: string; name: string }) => {
-      router.push({
-          pathname: '/college-map-details',
-          params: { college: item.name }
-      });
-  };
-
+export default function CollegeListScreen() {
   return (
-    <ThemedView style={styles.container}>
-      <ThemedView style={styles.header}>
-        <ThemedText style={styles.title}>College Maps</ThemedText>
-      </ThemedView>
-
+    <View style={styles.container}>
+      <Stack.Screen options={{ title: 'Residential Colleges' }} />
       <FlatList
         data={colleges}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={styles.list}
         renderItem={({ item }) => (
           <TouchableOpacity
-            style={styles.collegeItem}
-            onPress={() => handleLocationPress(item)}
+            style={styles.card}
+            onPress={() =>
+              router.push({
+                pathname: '/college-map-details',
+                params: { college: item.name },
+              })
+            }
+            activeOpacity={0.7}
           >
-            <Image
-              source={COLLEGE_IMAGES[item.name]}
-              style={styles.collegeImage}
-            />
-            <ThemedText style={styles.locationName}>{item.name}</ThemedText>
-            <IconSymbol size={20} name="chevron.right" color="#999" />
+            <Image source={COLLEGE_IMAGES[item.name]} style={styles.collegeImage} />
+            <Text style={styles.collegeName}>{item.name}</Text>
+            <Ionicons name="chevron-forward" size={18} color="#999" />
           </TouchableOpacity>
         )}
       />
-    </ThemedView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#f8f9fa',
   },
-  header: {
-    paddingTop: 20,
-    paddingHorizontal: 20,
-    paddingBottom: 20,
+  list: {
+    padding: 16,
+    gap: 10,
   },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: 10,
-    paddingTop: 10,
-  },
-  aboutTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 10,
-    marginTop: 10,
-  },
-  aboutText: {
-    fontSize: 14,
-    lineHeight: 22,
-  },
-  listContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-  },
-  locationItem: {
+  card: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  locationName: {
-    fontSize: 17,
-  },
-  collegeItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    backgroundColor: '#fff',
     borderWidth: 1,
-    borderColor: '#d0d0d0',
-    borderRadius: 16,
-    marginBottom: 12,
-    backgroundColor: '#fff',  // or use ThemedView background
+    borderColor: '#E5E5E5',
+    borderRadius: 12,
+    padding: 12,
+    paddingRight: 14,
   },
   collegeImage: {
-    width: 50,
-    height: 50,
-    marginRight: 16,
-    resizeMode: 'contain',
+    width: 44,
+    height: 44,
+    borderRadius: 8,
+    marginRight: 14,
   },
   collegeName: {
     flex: 1,
-    fontSize: 17,
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#333',
   },
 });
