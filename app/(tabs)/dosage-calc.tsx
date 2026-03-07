@@ -26,8 +26,6 @@ const CLEARANCE_HIERARCHY: Record<string, number> = {
   BLS: 1,   // EMT / Basic Life Support
   SE: 2,    // AEMT / Special Events
   ALS: 3,   // Advanced Life Support
-  IC: 4,    // Incharge
-  PM: 5,    // Paramedic
 };
 
 const CLEARANCE_LABELS: Record<string, string> = {
@@ -35,23 +33,25 @@ const CLEARANCE_LABELS: Record<string, string> = {
   BLS: "EMT",
   SE: "AEMT",
   ALS: "ALS",
-  IC: "Incharge",
-  PM: "Paramedic",
 };
+
+// Incharge category_id in the contacts table
+const INCHARGE_CATEGORY_ID = 2;
 
 interface DrugPermission {
   minLevel: number;
   approval?: string;
+  inchargeOnly?: boolean;
 }
 
 const DRUG_PERMISSIONS: Record<string, DrugPermission> = {
-  // Requires Medical Command approval
+  // Requires Medical Command approval — always, even for incharges
   epinephrine:        { minLevel: CLEARANCE_HIERARCHY.ALS, approval: "Requires Medical Command approval" },
-  // Incharge-only drugs
-  amiodarone:         { minLevel: CLEARANCE_HIERARCHY.IC },
-  calcium_chloride:   { minLevel: CLEARANCE_HIERARCHY.IC },
-  sodium_bicarbonate: { minLevel: CLEARANCE_HIERARCHY.IC },
-  nitroglycerin:      { minLevel: CLEARANCE_HIERARCHY.IC },
+  // Incharge-only drugs — non-incharges see "above your clearance"
+  amiodarone:         { minLevel: CLEARANCE_HIERARCHY.ALS, inchargeOnly: true },
+  calcium_chloride:   { minLevel: CLEARANCE_HIERARCHY.ALS, inchargeOnly: true },
+  sodium_bicarbonate: { minLevel: CLEARANCE_HIERARCHY.ALS, inchargeOnly: true },
+  nitroglycerin:      { minLevel: CLEARANCE_HIERARCHY.ALS, inchargeOnly: true },
   // ALS drugs — allowed but need Incharge approval
   dextrose:           { minLevel: CLEARANCE_HIERARCHY.ALS, approval: "Requires Incharge approval" },
   narcan:             { minLevel: CLEARANCE_HIERARCHY.ALS, approval: "Requires Incharge approval" },
@@ -504,9 +504,10 @@ export default function Index() {
 
   // Clearance state
   const [userClearance, setUserClearance] = useState<{ level: number; key: string } | null>(null);
+  const [isIncharge, setIsIncharge] = useState(false);
   const [clearanceLoading, setClearanceLoading] = useState(true);
 
-  // Fetch user clearance from contacts table
+  // Fetch user clearance and category from contacts table
   useEffect(() => {
     const fetchClearance = async () => {
       const email = session?.user?.email;
@@ -518,12 +519,17 @@ export default function Index() {
       try {
         const { data } = await supabase
           .from("contacts")
-          .select("clearances")
+          .select("clearances, category_id")
           .ilike("email", email.toLowerCase())
           .single();
 
-        if (data?.clearances?.length) {
-          setUserClearance(getUserClearanceLevel(data.clearances));
+        if (data) {
+          setIsIncharge(data.category_id === INCHARGE_CATEGORY_ID);
+          if (data.clearances?.length) {
+            setUserClearance(getUserClearanceLevel(data.clearances));
+          } else {
+            setUserClearance({ level: 0, key: "OBS" });
+          }
         } else {
           setUserClearance({ level: 0, key: "OBS" });
         }
@@ -537,15 +543,8 @@ export default function Index() {
     fetchClearance();
   }, [session]);
 
-  // Filter drugs based on clearance
-  const allowedDrugs = DRUG_DATABASE.filter((drug) => {
-    if (!userClearance) return false;
-    const perm = DRUG_PERMISSIONS[drug.value];
-    if (!perm) return true;
-    return userClearance.level >= perm.minLevel;
-  });
-
-  const drugItems = allowedDrugs.map((drug) => ({
+  // All drugs visible to everyone
+  const drugItems = DRUG_DATABASE.map((drug) => ({
     label: drug.label,
     value: drug.value,
   }));
@@ -554,9 +553,31 @@ export default function Index() {
   const [selectedDrug, setSelectedDrug] = useState<string | null>(null);
   const [showDrugPicker, setShowDrugPicker] = useState(false);
 
-  // Get approval warning for selected drug
+  // Approval warning adjusts based on clearance level and incharge status
+  const getApprovalNote = (drugValue: string): string | undefined => {
+    if (!userClearance) return undefined;
+    const perm = DRUG_PERMISSIONS[drugValue];
+    if (!perm) return undefined;
+
+    // Medical Command approval is always required regardless of level
+    if (perm.approval?.includes("Medical Command")) return perm.approval;
+
+    // Incharges get full access (no approval warnings)
+    if (isIncharge) return undefined;
+
+    // Incharge-only drugs — non-incharges can't give these
+    if (perm.inchargeOnly) return "Incharge only — above your clearance";
+
+    // Below min clearance level
+    if (userClearance.level < perm.minLevel) {
+      return "Above your clearance — requires approval";
+    }
+
+    return perm.approval;
+  };
+
   const selectedDrugApproval = selectedDrug
-    ? DRUG_PERMISSIONS[selectedDrug]?.approval
+    ? getApprovalNote(selectedDrug)
     : undefined;
 
   // Route dropdown
@@ -566,13 +587,8 @@ export default function Index() {
     { label: "Please select drug", value: "" },
   ]);
 
-  // Age group dropdown
+  // Age group
   const [ageGroup, setAgeGroup] = useState<string | null>(null);
-  const [showAgeGroupPicker, setShowAgeGroupPicker] = useState(false);
-  const [ageGroupItems] = useState([
-    { label: "Pediatric", value: "pediatric" },
-    { label: "Adult", value: "adult" },
-  ]);
 
   // Weight input
   const [weight, setWeight] = useState("");
@@ -702,11 +718,14 @@ export default function Index() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Dosage Calculator</Text>
+          <View>
+            <Text style={styles.headerBrand}>REMS</Text>
+            <Text style={styles.headerSubtitle}>Dosage Calculator</Text>
+          </View>
           {userClearance && (
             <View style={styles.clearanceBadge}>
               <Text style={styles.clearanceBadgeText}>
-                {CLEARANCE_LABELS[userClearance.key] || userClearance.key}
+                {isIncharge ? "Incharge" : (CLEARANCE_LABELS[userClearance.key] || userClearance.key)}
               </Text>
             </View>
           )}
@@ -720,53 +739,48 @@ export default function Index() {
           </View>
         )}
 
-        {/* Observer — no drugs available */}
-        {!clearanceLoading && userClearance?.level === 0 && (
-          <View style={styles.observerCard}>
-            <Text style={styles.observerTitle}>Observer Access</Text>
-            <Text style={styles.observerText}>
-              Observers can only administer oxygen. No drug dosage calculations
-              are available for this clearance level.
-            </Text>
-          </View>
-        )}
-
-        {/* Calculator — only if user has drug access */}
-        {!clearanceLoading && userClearance && userClearance.level > 0 && (
+        {/* Calculator */}
+        {!clearanceLoading && userClearance && (
           <>
-        {/* Result Card */}
-        <Animated.View
-          style={[
-            styles.resultCard,
-            dosage ? styles.resultCardActive : null,
-            { transform: [{ scale: resultCardScale }] },
-          ]}
-        >
-          <Text style={styles.resultLabel}>
-            {dosage ? "Calculated Dosage" : "Enter parameters below"}
-          </Text>
-          <Animated.Text
-            style={[
-              styles.dosageText,
-              dosage ? styles.dosageTextActive : null,
-              {
-                opacity: fadeAnim,
-                transform: [{ scale: scaleAnim }, { translateY: slideAnim }],
-              },
-            ]}
-          >
-            {dosage || "—"}
-          </Animated.Text>
-          {selectedDrugApproval && dosage ? (
-            <View style={styles.approvalBanner}>
-              <Text style={styles.approvalBannerText}>{selectedDrugApproval}</Text>
-            </View>
-          ) : null}
-        </Animated.View>
-
         {/* Form */}
         <View style={styles.form}>
-          <Text style={styles.label}>Drug Administered</Text>
+          {/* Age Group — inline toggle */}
+          <View style={styles.ageToggleRow}>
+            <TouchableOpacity
+              style={[
+                styles.ageToggleButton,
+                ageGroup === "pediatric" && styles.ageToggleButtonActive,
+              ]}
+              onPress={() => setAgeGroup("pediatric")}
+            >
+              <Text
+                style={[
+                  styles.ageToggleText,
+                  ageGroup === "pediatric" && styles.ageToggleTextActive,
+                ]}
+              >
+                Pediatric
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.ageToggleButton,
+                ageGroup === "adult" && styles.ageToggleButtonActive,
+              ]}
+              onPress={() => setAgeGroup("adult")}
+            >
+              <Text
+                style={[
+                  styles.ageToggleText,
+                  ageGroup === "adult" && styles.ageToggleTextActive,
+                ]}
+              >
+                Adult
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <Text style={styles.label}>Drug</Text>
           <TouchableOpacity
             style={styles.pickerButton}
             onPress={() => setShowDrugPicker(true)}
@@ -783,13 +797,13 @@ export default function Index() {
             </Text>
             <Text style={styles.pickerChevron}>›</Text>
           </TouchableOpacity>
-          {selectedDrugApproval && !dosage ? (
+          {selectedDrugApproval ? (
             <View style={styles.approvalNote}>
               <Text style={styles.approvalNoteText}>{selectedDrugApproval}</Text>
             </View>
           ) : null}
 
-          <Text style={styles.label}>Route of Administration</Text>
+          <Text style={styles.label}>Route</Text>
           <TouchableOpacity
             style={[
               styles.pickerButton,
@@ -868,25 +882,37 @@ export default function Index() {
               </Text>
             </View>
           </View>
-
-          <Text style={styles.label}>Age Group</Text>
-          <TouchableOpacity
-            style={styles.pickerButton}
-            onPress={() => setShowAgeGroupPicker(true)}
-          >
-            <Text
-              style={[
-                styles.pickerButtonText,
-                !ageGroup && styles.pickerButtonPlaceholder,
-              ]}
-            >
-              {ageGroup
-                ? ageGroupItems.find((g) => g.value === ageGroup)?.label
-                : "Select age group..."}
-            </Text>
-            <Text style={styles.pickerChevron}>›</Text>
-          </TouchableOpacity>
         </View>
+
+        {/* Result Card */}
+        <Animated.View
+          style={[
+            styles.resultCard,
+            dosage ? styles.resultCardActive : null,
+            { transform: [{ scale: resultCardScale }] },
+          ]}
+        >
+          <Text style={styles.resultLabel}>
+            {dosage ? "Calculated Dosage" : "Fill in all fields above"}
+          </Text>
+          <Animated.Text
+            style={[
+              styles.dosageText,
+              dosage ? styles.dosageTextActive : null,
+              {
+                opacity: fadeAnim,
+                transform: [{ scale: scaleAnim }, { translateY: slideAnim }],
+              },
+            ]}
+          >
+            {dosage || "—"}
+          </Animated.Text>
+          {selectedDrugApproval && dosage ? (
+            <View style={styles.approvalBanner}>
+              <Text style={styles.approvalBannerText}>{selectedDrugApproval}</Text>
+            </View>
+          ) : null}
+        </Animated.View>
           </>
         )}
       </ScrollView>
@@ -954,36 +980,6 @@ export default function Index() {
         </View>
       </Modal>
 
-      <Modal visible={showAgeGroupPicker} transparent animationType="fade">
-        <View style={styles.modalContainer}>
-          <TouchableOpacity
-            style={styles.modalOverlay}
-            activeOpacity={1}
-            onPress={() => setShowAgeGroupPicker(false)}
-          />
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <TouchableOpacity onPress={() => setShowAgeGroupPicker(false)}>
-                <Text style={styles.modalDoneButton}>Done</Text>
-              </TouchableOpacity>
-            </View>
-            <Picker
-              selectedValue={ageGroup}
-              onValueChange={(itemValue) => setAgeGroup(itemValue)}
-              itemStyle={styles.pickerItem}
-            >
-              <Picker.Item label="Select age group..." value={null} />
-              {ageGroupItems.map((group) => (
-                <Picker.Item
-                  key={group.value}
-                  label={group.label}
-                  value={group.value}
-                />
-              ))}
-            </Picker>
-          </View>
-        </View>
-      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -1002,13 +998,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingTop: Platform.OS === "ios" ? 64 : 44,
     paddingHorizontal: 20,
-    paddingBottom: 16,
+    paddingBottom: 12,
   },
-  headerTitle: {
+  headerBrand: {
     fontSize: 28,
     fontWeight: "800",
     color: "#1E40AF",
-    letterSpacing: 0.5,
+    letterSpacing: 2,
+  },
+  headerSubtitle: {
+    fontSize: 15,
+    color: "#666",
+    marginTop: 2,
   },
   clearanceBadge: {
     backgroundColor: "#DBEAFE",
@@ -1081,7 +1082,7 @@ const styles = StyleSheet.create({
   resultCard: {
     marginHorizontal: 20,
     backgroundColor: "#fff",
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 24,
     borderWidth: 1,
     borderColor: "#E5E5E5",
@@ -1099,16 +1100,45 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   dosageText: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: "700",
-    color: "#999",
+    color: "#ccc",
     textAlign: "center",
+    lineHeight: 30,
   },
   dosageTextActive: {
     color: "#1E40AF",
   },
   form: {
     paddingHorizontal: 20,
+    marginBottom: 20,
+  },
+  ageToggleRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 20,
+    marginBottom: 20,
+  },
+  ageToggleButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#E5E5E5",
+    alignItems: "center",
+  },
+  ageToggleButtonActive: {
+    backgroundColor: "#DBEAFE",
+    borderColor: "#1E40AF",
+  },
+  ageToggleText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#999",
+  },
+  ageToggleTextActive: {
+    color: "#1E40AF",
   },
   label: {
     fontSize: 13,
