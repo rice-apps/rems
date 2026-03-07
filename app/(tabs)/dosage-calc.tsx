@@ -598,85 +598,65 @@ export default function Index() {
   }, [isLbs, toggleSlideAnim]);
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={{ alignItems: "center", width: "100%" }}
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={styles.container}
+    >
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
       >
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Dosage Calculator</Text>
+        </View>
+
+        {/* Result Card */}
         <Animated.View
           style={[
-            styles.result,
-            {
-              transform: [{ scale: resultCardScale }],
-            },
+            styles.resultCard,
+            dosage ? styles.resultCardActive : null,
+            { transform: [{ scale: resultCardScale }] },
           ]}
         >
-          <View style={styles.white}>
-            <Text>Hello</Text>
-          </View>
-          <Text style={styles.title}>Dosage Calculator</Text>
+          <Text style={styles.resultLabel}>
+            {dosage ? "Calculated Dosage" : "Enter parameters below"}
+          </Text>
           <Animated.Text
             style={[
               styles.dosageText,
+              dosage ? styles.dosageTextActive : null,
               {
                 opacity: fadeAnim,
                 transform: [{ scale: scaleAnim }, { translateY: slideAnim }],
               },
             ]}
           >
-            {dosage || "XXX"}
+            {dosage || "—"}
           </Animated.Text>
         </Animated.View>
 
-        <View style={styles.border}>
+        {/* Form */}
+        <View style={styles.form}>
           <Text style={styles.label}>Drug Administered</Text>
           <TouchableOpacity
             style={styles.pickerButton}
             onPress={() => setShowDrugPicker(true)}
           >
-            <Text style={styles.pickerButtonText}>
+            <Text
+              style={[
+                styles.pickerButtonText,
+                !selectedDrug && styles.pickerButtonPlaceholder,
+              ]}
+            >
               {selectedDrug
                 ? drugItems.find((d) => d.value === selectedDrug)?.label
                 : "Select a drug..."}
             </Text>
+            <Text style={styles.pickerChevron}>›</Text>
           </TouchableOpacity>
 
-          <Modal
-            visible={showDrugPicker}
-            transparent={true}
-            animationType="fade"
-          >
-            <View style={styles.modalContainer}>
-              <TouchableOpacity
-                style={styles.modalOverlay}
-                activeOpacity={1}
-                onPress={() => setShowDrugPicker(false)}
-              />
-              <View style={styles.modalContent}>
-                <View style={styles.modalHeader}>
-                  <TouchableOpacity onPress={() => setShowDrugPicker(false)}>
-                    <Text style={styles.modalDoneButton}>Done</Text>
-                  </TouchableOpacity>
-                </View>
-                <Picker
-                  selectedValue={selectedDrug}
-                  onValueChange={(itemValue) => setSelectedDrug(itemValue)}
-                  itemStyle={styles.pickerItem}
-                >
-                  <Picker.Item label="Select a drug..." value={null} />
-                  {drugItems.map((drug) => (
-                    <Picker.Item
-                      key={drug.value}
-                      label={drug.label}
-                      value={drug.value}
-                    />
-                  ))}
-                </Picker>
-              </View>
-            </View>
-          </Modal>
-
-          <Text style={styles.label}>Route of Administration:</Text>
+          <Text style={styles.label}>Route of Administration</Text>
           <TouchableOpacity
             style={[
               styles.pickerButton,
@@ -688,77 +668,29 @@ export default function Index() {
             <Text
               style={[
                 styles.pickerButtonText,
-                !selectedDrug && styles.pickerButtonTextDisabled,
+                (!selectedRoute || !selectedDrug) &&
+                  styles.pickerButtonPlaceholder,
               ]}
             >
               {selectedRoute
                 ? routeItems.find((r) => r.value === selectedRoute)?.label
                 : "Select a route..."}
             </Text>
+            <Text style={styles.pickerChevron}>›</Text>
           </TouchableOpacity>
 
-          <Modal
-            visible={showRoutePicker}
-            transparent={true}
-            animationType="fade"
-          >
-            <View style={styles.modalContainer}>
-              <TouchableOpacity
-                style={styles.modalOverlay}
-                activeOpacity={1}
-                onPress={() => setShowRoutePicker(false)}
-              />
-              <View style={styles.modalContent}>
-                <View style={styles.modalHeader}>
-                  <TouchableOpacity onPress={() => setShowRoutePicker(false)}>
-                    <Text style={styles.modalDoneButton}>Done</Text>
-                  </TouchableOpacity>
-                </View>
-                <Picker
-                  selectedValue={selectedRoute}
-                  onValueChange={(itemValue) => setSelectedRoute(itemValue)}
-                  itemStyle={styles.pickerItem}
-                >
-                  <Picker.Item label="Select a route..." value={null} />
-                  {routeItems.map((route) => (
-                    <Picker.Item
-                      key={route.value}
-                      label={route.label}
-                      value={route.value}
-                    />
-                  ))}
-                </Picker>
-              </View>
-            </View>
-          </Modal>
-
           <Text style={styles.label}>Weight</Text>
-          <Animated.View
-            style={[
-              styles.weightInputContainer,
-              {
-                borderBottomColor: weightBorderAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: ["#e0e0e0", "#1E40AF"],
-                }),
-                borderBottomWidth: weightBorderAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [1, 2],
-                }),
-              },
-            ]}
-          >
+          <View style={styles.weightRow}>
             <TextInput
               style={styles.weightInput}
-              placeholder=""
+              placeholder="Enter weight"
+              placeholderTextColor="#999"
               keyboardType="decimal-pad"
               value={weight}
               onFocus={() => setWeightFocused(true)}
               onBlur={() => setWeightFocused(false)}
               onChangeText={(text) => {
-                // Only allow numbers and decimal point
                 const numericValue = text.replace(/[^0-9.]/g, "");
-                // Prevent multiple decimal points
                 const parts = numericValue.split(".");
                 const validValue =
                   parts.length > 2
@@ -767,7 +699,7 @@ export default function Index() {
                 setWeight(validValue);
               }}
             />
-            <View style={styles.toggleContainerInside}>
+            <View style={styles.toggleContainer}>
               <Animated.View
                 style={[
                   styles.toggleSlider,
@@ -776,7 +708,7 @@ export default function Index() {
                       {
                         translateX: toggleSlideAnim.interpolate({
                           inputRange: [0, 1],
-                          outputRange: [0, 52], // Width adjusted to match button size
+                          outputRange: [0, 48],
                         }),
                       },
                     ],
@@ -785,8 +717,8 @@ export default function Index() {
               />
               <Text
                 style={[
-                  styles.toggleButton,
-                  isLbs && styles.toggleButtonActive,
+                  styles.toggleOption,
+                  isLbs && styles.toggleOptionActive,
                 ]}
                 onPress={() => setIsLbs(true)}
               >
@@ -794,171 +726,274 @@ export default function Index() {
               </Text>
               <Text
                 style={[
-                  styles.toggleButton,
-                  !isLbs && styles.toggleButtonActive,
+                  styles.toggleOption,
+                  !isLbs && styles.toggleOptionActive,
                 ]}
                 onPress={() => setIsLbs(false)}
               >
                 kg
               </Text>
             </View>
-          </Animated.View>
+          </View>
 
-          <Text style={styles.label}>Age Group:</Text>
+          <Text style={styles.label}>Age Group</Text>
           <TouchableOpacity
             style={styles.pickerButton}
             onPress={() => setShowAgeGroupPicker(true)}
           >
-            <Text style={styles.pickerButtonText}>
+            <Text
+              style={[
+                styles.pickerButtonText,
+                !ageGroup && styles.pickerButtonPlaceholder,
+              ]}
+            >
               {ageGroup
                 ? ageGroupItems.find((g) => g.value === ageGroup)?.label
                 : "Select age group..."}
             </Text>
+            <Text style={styles.pickerChevron}>›</Text>
           </TouchableOpacity>
-
-          <Modal
-            visible={showAgeGroupPicker}
-            transparent={true}
-            animationType="fade"
-          >
-            <View style={styles.modalContainer}>
-              <TouchableOpacity
-                style={styles.modalOverlay}
-                activeOpacity={1}
-                onPress={() => setShowAgeGroupPicker(false)}
-              />
-              <View style={styles.modalContent}>
-                <View style={styles.modalHeader}>
-                  <TouchableOpacity
-                    onPress={() => setShowAgeGroupPicker(false)}
-                  >
-                    <Text style={styles.modalDoneButton}>Done</Text>
-                  </TouchableOpacity>
-                </View>
-                <Picker
-                  selectedValue={ageGroup}
-                  onValueChange={(itemValue) => setAgeGroup(itemValue)}
-                  itemStyle={styles.pickerItem}
-                >
-                  <Picker.Item label="Select age group..." value={null} />
-                  {ageGroupItems.map((group) => (
-                    <Picker.Item
-                      key={group.value}
-                      label={group.label}
-                      value={group.value}
-                    />
-                  ))}
-                </Picker>
-              </View>
-            </View>
-          </Modal>
         </View>
-      </KeyboardAvoidingView>
-    </ScrollView>
+      </ScrollView>
+
+      {/* Picker Modals */}
+      <Modal visible={showDrugPicker} transparent animationType="fade">
+        <View style={styles.modalContainer}>
+          <TouchableOpacity
+            style={styles.modalOverlay}
+            activeOpacity={1}
+            onPress={() => setShowDrugPicker(false)}
+          />
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <TouchableOpacity onPress={() => setShowDrugPicker(false)}>
+                <Text style={styles.modalDoneButton}>Done</Text>
+              </TouchableOpacity>
+            </View>
+            <Picker
+              selectedValue={selectedDrug}
+              onValueChange={(itemValue) => setSelectedDrug(itemValue)}
+              itemStyle={styles.pickerItem}
+            >
+              <Picker.Item label="Select a drug..." value={null} />
+              {drugItems.map((drug) => (
+                <Picker.Item
+                  key={drug.value}
+                  label={drug.label}
+                  value={drug.value}
+                />
+              ))}
+            </Picker>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={showRoutePicker} transparent animationType="fade">
+        <View style={styles.modalContainer}>
+          <TouchableOpacity
+            style={styles.modalOverlay}
+            activeOpacity={1}
+            onPress={() => setShowRoutePicker(false)}
+          />
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <TouchableOpacity onPress={() => setShowRoutePicker(false)}>
+                <Text style={styles.modalDoneButton}>Done</Text>
+              </TouchableOpacity>
+            </View>
+            <Picker
+              selectedValue={selectedRoute}
+              onValueChange={(itemValue) => setSelectedRoute(itemValue)}
+              itemStyle={styles.pickerItem}
+            >
+              <Picker.Item label="Select a route..." value={null} />
+              {routeItems.map((route) => (
+                <Picker.Item
+                  key={route.value}
+                  label={route.label}
+                  value={route.value}
+                />
+              ))}
+            </Picker>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={showAgeGroupPicker} transparent animationType="fade">
+        <View style={styles.modalContainer}>
+          <TouchableOpacity
+            style={styles.modalOverlay}
+            activeOpacity={1}
+            onPress={() => setShowAgeGroupPicker(false)}
+          />
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <TouchableOpacity onPress={() => setShowAgeGroupPicker(false)}>
+                <Text style={styles.modalDoneButton}>Done</Text>
+              </TouchableOpacity>
+            </View>
+            <Picker
+              selectedValue={ageGroup}
+              onValueChange={(itemValue) => setAgeGroup(itemValue)}
+              itemStyle={styles.pickerItem}
+            >
+              <Picker.Item label="Select age group..." value={null} />
+              {ageGroupItems.map((group) => (
+                <Picker.Item
+                  key={group.value}
+                  label={group.label}
+                  value={group.value}
+                />
+              ))}
+            </Picker>
+          </View>
+        </View>
+      </Modal>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  weightInputContainer: {
+  container: {
+    flex: 1,
+    backgroundColor: "#f8f9fa",
+  },
+  scrollContent: {
+    paddingBottom: 40,
+  },
+  header: {
+    paddingTop: Platform.OS === "ios" ? 64 : 44,
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: "800",
+    color: "#1E40AF",
+    letterSpacing: 0.5,
+  },
+  resultCard: {
+    marginHorizontal: 20,
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: "#E5E5E5",
+    alignItems: "center",
+    marginBottom: 24,
+  },
+  resultCardActive: {
+    backgroundColor: "#DBEAFE",
+    borderColor: "#1E40AF",
+  },
+  resultLabel: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: "#888",
+    marginBottom: 8,
+  },
+  dosageText: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#999",
+    textAlign: "center",
+  },
+  dosageTextActive: {
+    color: "#1E40AF",
+  },
+  form: {
+    paddingHorizontal: 20,
+  },
+  label: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#888",
+    marginBottom: 6,
+    marginTop: 4,
+  },
+  pickerButton: {
     flexDirection: "row",
     alignItems: "center",
-    width: "100%",
-    height: 55,
-    borderRadius: 8,
-    padding: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
-    marginBottom: 20,
+    justifyContent: "space-between",
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#E5E5E5",
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    height: 50,
+    marginBottom: 16,
+  },
+  pickerButtonText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#333",
+    flex: 1,
+  },
+  pickerButtonPlaceholder: {
+    color: "#999",
+    fontWeight: "400",
+  },
+  pickerButtonDisabled: {
+    opacity: 0.4,
+  },
+  pickerChevron: {
+    fontSize: 22,
+    color: "#999",
+    fontWeight: "300",
+  },
+  weightRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16,
+    gap: 10,
   },
   weightInput: {
     flex: 1,
-    fontSize: 16,
-    color: "#111111",
-    fontWeight: "bold",
+    height: 50,
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#E5E5E5",
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#333",
   },
-  toggleContainerInside: {
+  toggleContainer: {
     flexDirection: "row",
-    backgroundColor: "#e0e0e0",
-    borderRadius: 20,
+    backgroundColor: "#E5E5E5",
+    borderRadius: 10,
     padding: 3,
     position: "relative",
   },
   toggleSlider: {
     position: "absolute",
-    width: 52,
-    height: 32,
+    width: 48,
+    height: "100%",
     backgroundColor: "#fff",
-    borderRadius: 18,
+    borderRadius: 8,
     left: 3,
-    top: 1,
+    top: 3,
   },
-  toggleButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 18,
-    borderRadius: 18,
+  toggleOption: {
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 8,
     fontSize: 14,
-    lineHeight: 16,
     fontWeight: "500",
     color: "#666",
     zIndex: 1,
-    width: 52,
+    width: 48,
     textAlign: "center",
   },
-  toggleButtonActive: {
-    backgroundColor: "transparent",
+  toggleOptionActive: {
     color: "#1E40AF",
     fontWeight: "600",
   },
-  container: {
-    flexGrow: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "white",
-    overflow: "visible",
-  },
-  label: {
-    fontSize: 16,
-    alignSelf: "flex-start",
-    marginLeft: 10,
-    marginBottom: 5,
-    color: "#989898",
-  },
-  pickerContainer: {
-    width: "100%",
-    height: 55,
-    borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
-    marginBottom: 20,
-    justifyContent: "center",
-  },
-  picker: {
-    width: "100%",
-    height: 55,
-    color: "#111111",
-  },
   pickerItem: {
     height: 120,
-    color: "#111111",
-    fontWeight: "bold",
-  },
-  pickerButton: {
-    height: 55,
-    borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
-    marginBottom: 20,
-    justifyContent: "center",
-    paddingHorizontal: 10,
-  },
-  pickerButtonText: {
-    fontSize: 16,
-    color: "#111111",
-    fontWeight: "bold",
-  },
-  pickerButtonDisabled: {
-    opacity: 0.5,
-  },
-  pickerButtonTextDisabled: {
-    color: "#999",
+    color: "#333",
+    fontWeight: "600",
   },
   modalContainer: {
     flex: 1,
@@ -970,10 +1005,10 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    backgroundColor: "rgba(0, 0, 0, 0.4)",
   },
   modalContent: {
-    backgroundColor: "white",
+    backgroundColor: "#fff",
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingBottom: 40,
@@ -983,54 +1018,11 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
+    borderBottomColor: "#E5E5E5",
   },
   modalDoneButton: {
     fontSize: 17,
     color: "#1E40AF",
     fontWeight: "600",
-  },
-  result: {
-    width: "100%",
-    backgroundColor: "white",
-    paddingBottom: 30,
-    borderRadius: 30,
-    marginBottom: 30,
-    justifyContent: "flex-end",
-    textAlign: "center",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-    alignSelf: "stretch",
-    overflow: "visible",
-  },
-  title: {
-    fontSize: 15,
-    marginBottom: 10,
-    textAlign: "center",
-    backgroundColor: "white",
-  },
-  dosageText: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#111111",
-    backgroundColor: "white",
-    textAlign: "center",
-  },
-  border: {
-    padding: 12,
-  },
-  white: {
-    backgroundColor: "white",
-    position: "absolute",
-    top: -130,
-    left: -50,
-    width: 1000,
-    height: 200,
   },
 });
