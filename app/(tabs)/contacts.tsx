@@ -9,12 +9,14 @@ import {
   Linking,
   TextInput,
   ActivityIndicator,
+  Platform,
+  SectionList,
 } from "react-native";
 import * as Contacts from "expo-contacts";
 import { supabase } from "../../lib/supabase";
 import { Ionicons } from "@expo/vector-icons";
+import { Colors } from "@/constants/theme";
 
-// Type definitions
 interface Contact {
   firstName: string;
   lastName: string;
@@ -34,16 +36,16 @@ interface QuickAccessEntry {
   phone: string;
 }
 
-export default function Index() {
+const FILTERS = ["All", "ALS", "SE", "BLS", "OBS"];
+
+export default function ContactsScreen() {
   const [isAddingContacts, setIsAddingContacts] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedFilter, setSelectedFilter] = useState<string>("All");
+  const [selectedFilter, setSelectedFilter] = useState("All");
   const [contactData, setContactData] = useState<ContactCategory[]>([]);
   const [quickAccess, setQuickAccess] = useState<QuickAccessEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-
-  const filters = ["All", "ALS", "SE", "BLS", "OBS"];
 
   useEffect(() => {
     const fetchContacts = async () => {
@@ -88,74 +90,57 @@ export default function Index() {
     fetchContacts();
   }, []);
 
-  // Filter and search contacts
   const filteredData = useMemo(() => {
-    return contactData.map((category) => ({
-      ...category,
-      contacts: category.contacts.filter((contact) => {
-        const matchesSearch =
-          searchQuery === "" ||
-          `${contact.firstName} ${contact.lastName}`
-            .toLowerCase()
-            .includes(searchQuery.toLowerCase()) ||
-          contact.college.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          contact.phone.includes(searchQuery);
+    return contactData
+      .map((category) => ({
+        ...category,
+        contacts: category.contacts.filter((contact) => {
+          const q = searchQuery.toLowerCase();
+          const matchesSearch =
+            q === "" ||
+            `${contact.firstName} ${contact.lastName}`.toLowerCase().includes(q) ||
+            contact.college.toLowerCase().includes(q) ||
+            contact.phone.includes(searchQuery);
 
-        const matchesFilter =
-          selectedFilter === "All" ||
-          contact.clearances.includes(selectedFilter);
+          const matchesFilter =
+            selectedFilter === "All" || contact.clearances.includes(selectedFilter);
 
-        return matchesSearch && matchesFilter;
-      }),
-    })).filter((category) => category.contacts.length > 0);
+          return matchesSearch && matchesFilter;
+        }),
+      }))
+      .filter((category) => category.contacts.length > 0);
   }, [searchQuery, selectedFilter, contactData]);
 
-  // Request contacts permission
+  const totalFiltered = filteredData.reduce((sum, cat) => sum + cat.contacts.length, 0);
+
+  // ── Contact helpers ──────────────────────────────────────────────────────
+
   const requestContactsPermission = async (): Promise<boolean> => {
     const { status } = await Contacts.requestPermissionsAsync();
     if (status !== "granted") {
-      Alert.alert(
-        "Permission Required",
-        "Please grant contacts permission to add contacts to your phone."
-      );
+      Alert.alert("Permission Required", "Please grant contacts permission to add contacts to your phone.");
       return false;
     }
     return true;
   };
 
-  // Format phone number
-  const formatPhoneNumber = (phone: string): string => {
-    return phone.replace(/-/g, "");
-  };
+  const formatPhoneNumber = (phone: string) => phone.replace(/-/g, "");
 
-  // Add a single contact
   const addSingleContact = async (contact: Contact): Promise<boolean> => {
     try {
       const hasPermission = await requestContactsPermission();
       if (!hasPermission) return false;
 
-      const newContact: Contacts.Contact = {
+      const newContact = {
         name: `${contact.firstName} ${contact.lastName}`,
+        contactType: Contacts.ContactTypes.Person,
         firstName: contact.firstName,
         lastName: contact.lastName,
-        phoneNumbers: [
-          {
-            label: "mobile",
-            number: formatPhoneNumber(contact.phone),
-          },
-        ],
-        emails: [
-          {
-            label: "work",
-            email: contact.email,
-          },
-        ],
-        note:
-          contact.clearances.length > 0
-            ? `REMS - ${contact.college}\nClearances: ${contact.clearances.join(
-                ", "
-              )}`
-            : `REMS - ${contact.college}`,
+        phoneNumbers: [{ label: "mobile", number: formatPhoneNumber(contact.phone) }],
+        emails: [{ label: "work", email: contact.email }],
+        note: contact.clearances.length > 0
+          ? `REMS - ${contact.college}\nClearances: ${contact.clearances.join(", ")}`
+          : `REMS - ${contact.college}`,
       };
 
       await Contacts.addContactAsync(newContact);
@@ -166,19 +151,11 @@ export default function Index() {
     }
   };
 
-  // Add batch of contacts
-  const addBatchContacts = async (
-    contacts: Contact[],
-    categoryName: string
-  ) => {
+  const addBatchContacts = async (contacts: Contact[], categoryName: string) => {
     setIsAddingContacts(true);
-
     try {
       const hasPermission = await requestContactsPermission();
-      if (!hasPermission) {
-        setIsAddingContacts(false);
-        return;
-      }
+      if (!hasPermission) { setIsAddingContacts(false); return; }
 
       let successCount = 0;
       for (const contact of contacts) {
@@ -186,31 +163,22 @@ export default function Index() {
         if (success) successCount++;
       }
 
-      Alert.alert(
-        "Contacts Added",
-        `Successfully added ${successCount} of ${contacts.length} contacts from ${categoryName}.`
-      );
-    } catch (error) {
+      Alert.alert("Contacts Added", `Added ${successCount} of ${contacts.length} from ${categoryName}.`);
+    } catch {
       Alert.alert("Error", "An error occurred while adding contacts.");
     } finally {
       setIsAddingContacts(false);
     }
   };
 
-  // Add all contacts
   const addAllContacts = async () => {
     setIsAddingContacts(true);
-
     try {
       const hasPermission = await requestContactsPermission();
-      if (!hasPermission) {
-        setIsAddingContacts(false);
-        return;
-      }
+      if (!hasPermission) { setIsAddingContacts(false); return; }
 
       let totalSuccess = 0;
       let totalContacts = 0;
-
       for (const category of contactData) {
         totalContacts += category.contacts.length;
         for (const contact of category.contacts) {
@@ -219,211 +187,209 @@ export default function Index() {
         }
       }
 
-      Alert.alert(
-        "All Contacts Added",
-        `Successfully added ${totalSuccess} of ${totalContacts} REMS contacts.`
-      );
-    } catch (error) {
+      Alert.alert("All Contacts Added", `Added ${totalSuccess} of ${totalContacts} REMS contacts.`);
+    } catch {
       Alert.alert("Error", "An error occurred while adding contacts.");
     } finally {
       setIsAddingContacts(false);
     }
   };
 
-  // Make phone call
-  const makeCall = (phone: string) => {
-    const phoneNumber = formatPhoneNumber(phone);
-    Linking.openURL(`tel:${phoneNumber}`);
-  };
-
-  // Render quick access buttons
-  const renderQuickAccess = () => (
-    <View style={styles.quickAccessContainer}>
-      <Text style={styles.quickAccessTitle}>Quick Access</Text>
-      <View style={styles.quickAccessButtons}>
-        {quickAccess.map((entry) => (
-          <TouchableOpacity
-            key={entry.label}
-            style={styles.quickAccessButton}
-            onPress={() => makeCall(entry.phone)}
-          >
-            <Text style={styles.quickAccessLabel}>{entry.label}</Text>
-            <Text style={styles.quickAccessPhone}>{entry.phone}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-    </View>
-  );
-
-  // Render filter chips
-  const renderFilters = () => (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      style={styles.filtersContainer}
-      contentContainerStyle={styles.filtersContent}
-    >
-      {filters.map((filter) => (
-        <TouchableOpacity
-          key={filter}
-          style={[
-            styles.filterChip,
-            selectedFilter === filter && styles.filterChipActive,
-          ]}
-          onPress={() => setSelectedFilter(filter)}
-        >
-          <Text
-            style={[
-              styles.filterText,
-              selectedFilter === filter && styles.filterTextActive,
-            ]}
-          >
-            {filter}
-          </Text>
-        </TouchableOpacity>
-      ))}
-    </ScrollView>
-  );
-
-  // Add individual contact with feedback
   const addIndividualContact = async (contact: Contact) => {
     const success = await addSingleContact(contact);
     if (success) {
-      Alert.alert(
-        "Contact Added",
-        `${contact.firstName} ${contact.lastName} has been added to your contacts.`
-      );
+      Alert.alert("Contact Added", `${contact.firstName} ${contact.lastName} has been added.`);
     } else {
-      Alert.alert(
-        "Error",
-        `Failed to add ${contact.firstName} ${contact.lastName}.`
-      );
+      Alert.alert("Error", `Failed to add ${contact.firstName} ${contact.lastName}.`);
     }
   };
 
-  // Render individual contact card
-  const renderContact = (contact: Contact) => (
-    <View
-      key={`${contact.firstName}-${contact.lastName}-${contact.phone}`}
-      style={styles.contactCard}
-    >
-      <TouchableOpacity
-        style={styles.contactInfo}
-        onPress={() => makeCall(contact.phone)}
-        activeOpacity={0.7}
-      >
-        <Text style={styles.contactName}>
-          {contact.firstName} {contact.lastName}
-        </Text>
-        <Text style={styles.contactPhone}>{contact.phone}</Text>
-        <View style={styles.detailsRow}>
-          <Text style={styles.contactCollege}>{contact.college}</Text>
-          {contact.clearances.length > 0 && (
-            <View style={styles.clearancesContainer}>
-              {contact.clearances.map((clearance) => (
-                <View key={clearance} style={styles.clearanceBadge}>
-                  <Text style={styles.clearanceText}>{clearance}</Text>
-                </View>
-              ))}
-            </View>
-          )}
-        </View>
-      </TouchableOpacity>
-      <TouchableOpacity
-        style={styles.individualAddButton}
-        onPress={() => addIndividualContact(contact)}
-        disabled={isAddingContacts}
-      >
-        <Text style={styles.individualAddButtonText}>+</Text>
-      </TouchableOpacity>
-    </View>
-  );
+  const makeCall = (phone: string) => Linking.openURL(`tel:${formatPhoneNumber(phone)}`);
 
-  // Render category section
-  const renderCategory = (category: ContactCategory) => (
-    <View key={category.title} style={styles.categorySection}>
-      <View style={styles.categoryHeader}>
-        <Text style={styles.categoryTitle}>
-          {category.title} ({category.contacts.length})
-        </Text>
-        <TouchableOpacity
-          style={styles.batchAddButton}
-          onPress={() => addBatchContacts(category.contacts, category.title)}
-          disabled={isAddingContacts}
-        >
-          <Text style={styles.batchAddButtonText}>+ Add All</Text>
-        </TouchableOpacity>
+  // ── Render ───────────────────────────────────────────────────────────────
+
+  if (isLoading) {
+    return (
+      <View style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
+        <ActivityIndicator size="large" color={Colors.light.primary} />
       </View>
-      {category.contacts.map(renderContact)}
-    </View>
-  );
+    );
+  }
+
+  if (loadError) {
+    return (
+      <View style={[styles.container, { justifyContent: "center", alignItems: "center", padding: 40 }]}>
+        <Text style={{ fontSize: 16, color: "#999", textAlign: "center" }}>{loadError}</Text>
+      </View>
+    );
+  }
+
+  const sections = filteredData.map((cat) => ({
+    title: cat.title,
+    data: cat.contacts,
+  }));
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-          <Text style={styles.headerTitle}>REMS Contacts</Text>
-          <TouchableOpacity
-            onPress={() => {
-              Alert.alert("Sign Out", "Are you sure?", [
-                { text: "Cancel", style: "cancel" },
-                { text: "Sign Out", style: "destructive", onPress: () => supabase.auth.signOut() },
-              ]);
-            }}
-            style={{ padding: 6 }}
-          >
-            <Ionicons name="log-out-outline" size={24} color="#fff" />
-          </TouchableOpacity>
-        </View>
+      <SectionList
+        sections={sections}
+        keyExtractor={(item, index) => `${item.firstName}-${item.lastName}-${index}`}
+        stickySectionHeadersEnabled={false}
+        ListHeaderComponent={
+          <View>
+            {/* Header */}
+            <View style={styles.header}>
+              <View>
+                <Text style={styles.headerBrand}>REMS</Text>
+                <Text style={styles.headerSubtitle}>Contacts</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.addAllChip}
+                onPress={addAllContacts}
+                disabled={isAddingContacts}
+                activeOpacity={0.7}
+              >
+                {isAddingContacts ? (
+                  <ActivityIndicator size="small" color={Colors.light.primary} />
+                ) : (
+                  <>
+                    <Ionicons name="person-add" size={16} color={Colors.light.primary} />
+                    <Text style={styles.addAllChipText}>Add All</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
 
-        <View style={styles.searchContainer}>
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search by name, college, or phone..."
-            placeholderTextColor="#999999"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-        </View>
+            {/* Search bar */}
+            <View style={styles.searchBar}>
+              <Ionicons name="search" size={18} color="#999" style={{ marginRight: 10 }} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search name, college, or phone..."
+                placeholderTextColor="#999"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+              />
+              {searchQuery !== "" && (
+                <TouchableOpacity onPress={() => setSearchQuery("")}>
+                  <Ionicons name="close-circle" size={18} color="#ccc" />
+                </TouchableOpacity>
+              )}
+            </View>
 
-        <TouchableOpacity
-          style={styles.addAllButton}
-          onPress={addAllContacts}
-          disabled={isAddingContacts}
-        >
-          {isAddingContacts ? (
-            <ActivityIndicator color="#1E40AF" />
-          ) : (
-            <Text style={styles.addAllButtonText}>+ Add All Contacts</Text>
-          )}
-        </TouchableOpacity>
-      </View>
+            {/* Quick Access */}
+            {quickAccess.length > 0 && (
+              <View style={styles.quickAccessRow}>
+                {quickAccess.map((entry) => (
+                  <TouchableOpacity
+                    key={entry.label}
+                    style={styles.quickAccessCard}
+                    onPress={() => makeCall(entry.phone)}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="call" size={18} color={Colors.light.primary} />
+                    <View style={{ flex: 1, marginLeft: 10 }}>
+                      <Text style={styles.quickAccessLabel}>{entry.label}</Text>
+                      <Text style={styles.quickAccessPhone}>{entry.phone}</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={16} color="#ccc" />
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
 
-      <ScrollView
-        style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
-      >
-        {renderQuickAccess()}
-        {renderFilters()}
+            {/* Filter chips */}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.filtersContent}
+              style={styles.filtersRow}
+            >
+              {FILTERS.map((filter) => (
+                <TouchableOpacity
+                  key={filter}
+                  style={[styles.filterChip, selectedFilter === filter && styles.filterChipActive]}
+                  onPress={() => setSelectedFilter(filter)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.filterText, selectedFilter === filter && styles.filterTextActive]}>
+                    {filter}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+              <View style={{ paddingRight: 20 }} />
+            </ScrollView>
 
-        {isLoading ? (
-          <View style={styles.noResultsContainer}>
-            <ActivityIndicator size="large" color="#1E40AF" />
+            {/* Result count */}
+            <Text style={styles.resultCount}>
+              {totalFiltered} contact{totalFiltered !== 1 ? "s" : ""}
+            </Text>
           </View>
-        ) : loadError ? (
-          <View style={styles.noResultsContainer}>
-            <Text style={styles.noResultsText}>{loadError}</Text>
-          </View>
-        ) : filteredData.length > 0 ? (
-          filteredData.map(renderCategory)
-        ) : (
-          <View style={styles.noResultsContainer}>
-            <Text style={styles.noResultsText}>No contacts found</Text>
+        }
+        renderSectionHeader={({ section }) => (
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>
+              {section.title} ({section.data.length})
+            </Text>
+            <TouchableOpacity
+              style={styles.batchAddChip}
+              onPress={() => addBatchContacts(section.data, section.title)}
+              disabled={isAddingContacts}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.batchAddText}>+ Add All</Text>
+            </TouchableOpacity>
           </View>
         )}
-
-        <View style={styles.bottomPadding} />
-      </ScrollView>
+        renderItem={({ item: contact }) => (
+          <View style={styles.contactCard}>
+            <TouchableOpacity
+              style={styles.contactInfo}
+              onPress={() => makeCall(contact.phone)}
+              activeOpacity={0.7}
+            >
+              <View style={styles.contactNameRow}>
+                <Text style={styles.contactName}>
+                  {contact.firstName} {contact.lastName}
+                </Text>
+                {contact.clearances.length > 0 && (
+                  <View style={styles.badgeRow}>
+                    {contact.clearances.map((cl) => (
+                      <View key={cl} style={styles.clearanceBadge}>
+                        <Text style={styles.clearanceText}>{cl}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </View>
+              <View style={styles.contactDetails}>
+                <Ionicons name="call-outline" size={14} color="#999" />
+                <Text style={styles.contactPhone}>{contact.phone}</Text>
+                {contact.college ? (
+                  <>
+                    <Text style={styles.contactDot}>·</Text>
+                    <Text style={styles.contactCollege}>{contact.college}</Text>
+                  </>
+                ) : null}
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={() => addIndividualContact(contact)}
+              disabled={isAddingContacts}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="person-add-outline" size={16} color={Colors.light.primary} />
+            </TouchableOpacity>
+          </View>
+        )}
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No contacts found</Text>
+          </View>
+        }
+        contentContainerStyle={styles.listContent}
+      />
     </View>
   );
 }
@@ -431,213 +397,239 @@ export default function Index() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F5F5F5",
+    backgroundColor: "#f8f9fa",
   },
+  listContent: {
+    paddingBottom: 40,
+  },
+
+  // Header
   header: {
-    backgroundColor: "#111111",
-    paddingTop: 60,
-    paddingBottom: 20,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 20,
+    paddingTop: Platform.OS === "ios" ? 64 : 44,
+    paddingBottom: 12,
   },
-  headerTitle: {
+  headerBrand: {
     fontSize: 28,
-    fontWeight: "bold",
-    color: "#FFFFFF",
-    marginBottom: 15,
+    fontWeight: "800",
+    letterSpacing: 2,
+    color: Colors.light.primary,
   },
-  searchContainer: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 25,
-    marginBottom: 15,
+  headerSubtitle: {
+    fontSize: 15,
+    color: "#666",
+    marginTop: 2,
+  },
+  addAllChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: Colors.light.primaryLight,
+    borderWidth: 1,
+    borderColor: Colors.light.primary,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    gap: 6,
+  },
+  addAllChipText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: Colors.light.primary,
+  },
+
+  // Search
+  searchBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#ececec",
+    borderRadius: 12,
+    height: 48,
+    paddingHorizontal: 14,
+    marginHorizontal: 20,
+    marginTop: 8,
   },
   searchInput: {
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    fontSize: 16,
-    color: "#111111",
-  },
-  addAllButton: {
-    backgroundColor: "#FFFFFF",
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 25,
-    alignItems: "center",
-  },
-  addAllButtonText: {
-    color: "#111111",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  scrollView: {
     flex: 1,
+    fontSize: 15,
+    color: "#333",
   },
-  quickAccessContainer: {
+
+  // Quick Access
+  quickAccessRow: {
     paddingHorizontal: 20,
-    paddingTop: 20,
+    marginTop: 16,
+    gap: 8,
   },
-  quickAccessTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#111111",
-    marginBottom: 12,
-  },
-  quickAccessButtons: {
+  quickAccessCard: {
     flexDirection: "row",
-    gap: 12,
-  },
-  quickAccessButton: {
-    flex: 1,
-    backgroundColor: "#1E40AF",
-    borderRadius: 16,
-    padding: 16,
     alignItems: "center",
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#E5E5E5",
+    borderRadius: 12,
+    padding: 14,
   },
   quickAccessLabel: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: "600",
-    color: "#FFFFFF",
-    marginBottom: 4,
+    color: "#333",
   },
   quickAccessPhone: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#FFFFFF",
+    fontSize: 13,
+    color: "#666",
+    marginTop: 1,
   },
-  filtersContainer: {
-    marginTop: 20,
-    paddingLeft: 20,
+
+  // Filters
+  filtersRow: {
+    marginTop: 16,
   },
   filtersContent: {
-    paddingRight: 20,
+    paddingLeft: 20,
     gap: 8,
   },
   filterChip: {
     paddingVertical: 8,
     paddingHorizontal: 16,
-    borderRadius: 20,
-    backgroundColor: "#FFFFFF",
+    borderRadius: 10,
+    backgroundColor: "#fff",
     borderWidth: 1,
     borderColor: "#E5E5E5",
   },
   filterChipActive: {
-    backgroundColor: "#1E40AF",
-    borderColor: "#1E40AF",
+    backgroundColor: Colors.light.primaryLight,
+    borderColor: Colors.light.primary,
   },
   filterText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "600",
-    color: "#666666",
+    color: "#999",
   },
   filterTextActive: {
-    color: "#FFFFFF",
+    color: Colors.light.primary,
   },
-  categorySection: {
-    marginTop: 20,
+
+  // Result count
+  resultCount: {
+    fontSize: 12,
+    color: "#999",
+    paddingHorizontal: 24,
+    marginTop: 12,
+    marginBottom: 4,
+  },
+
+  // Section headers
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 20,
+    marginTop: 20,
+    marginBottom: 10,
   },
-  categoryHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  categoryTitle: {
-    fontSize: 20,
+  sectionTitle: {
+    fontSize: 16,
     fontWeight: "700",
-    color: "#111111",
+    color: "#333",
   },
-  batchAddButton: {
-    backgroundColor: "#1E40AF",
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
+  batchAddChip: {
+    backgroundColor: Colors.light.primaryLight,
+    borderWidth: 1,
+    borderColor: Colors.light.primary,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
   },
-  batchAddButtonText: {
-    color: "#FFFFFF",
-    fontSize: 14,
+  batchAddText: {
+    fontSize: 12,
     fontWeight: "600",
+    color: Colors.light.primary,
   },
+
+  // Contact card
   contactCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#E5E5E5",
+    borderRadius: 12,
+    padding: 14,
+    marginHorizontal: 20,
+    marginBottom: 8,
   },
   contactInfo: {
     flex: 1,
     marginRight: 12,
   },
-  individualAddButton: {
-    backgroundColor: "#1E40AF",
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  individualAddButtonText: {
-    color: "#FFFFFF",
-    fontSize: 24,
-    fontWeight: "600",
-  },
-  contactName: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#111111",
-    marginBottom: 4,
-  },
-  contactPhone: {
-    fontSize: 16,
-    color: "#666666",
-    marginBottom: 8,
-  },
-  detailsRow: {
+  contactNameRow: {
     flexDirection: "row",
     alignItems: "center",
-    flexWrap: "wrap",
-  },
-  contactCollege: {
-    fontSize: 14,
-    color: "#999999",
-    marginRight: 12,
-  },
-  clearancesContainer: {
-    flexDirection: "row",
     flexWrap: "wrap",
     gap: 6,
+    marginBottom: 4,
+  },
+  contactName: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#333",
+  },
+  badgeRow: {
+    flexDirection: "row",
+    gap: 4,
   },
   clearanceBadge: {
-    backgroundColor: "#DBEAFE",
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 8,
+    backgroundColor: Colors.light.primaryLight,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 4,
   },
   clearanceText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#1E3A8A",
+    fontSize: 10,
+    fontWeight: "700",
+    color: Colors.light.primary,
+    letterSpacing: 0.4,
   },
-  noResultsContainer: {
+  contactDetails: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  contactPhone: {
+    fontSize: 13,
+    color: "#666",
+  },
+  contactDot: {
+    fontSize: 13,
+    color: "#ccc",
+    marginHorizontal: 2,
+  },
+  contactCollege: {
+    fontSize: 13,
+    color: "#999",
+  },
+  addButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: Colors.light.primaryLight,
+    borderWidth: 1,
+    borderColor: Colors.light.primary,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  // Empty
+  emptyContainer: {
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 40,
   },
-  noResultsText: {
-    fontSize: 16,
-    color: "#999999",
-  },
-  bottomPadding: {
-    height: 40,
+  emptyText: {
+    fontSize: 15,
+    color: "#999",
   },
 });
