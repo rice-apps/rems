@@ -1,47 +1,34 @@
-import { View, Text, TouchableOpacity, StyleSheet, Platform, SectionList } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Platform, SectionList, ActivityIndicator } from 'react-native';
 import { router } from 'expo-router';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/constants/theme';
-import { useRef } from 'react';
-
-const COLLEGE_IMAGES: Record<string, any> = {
-  'Baker College': require('@/assets/images/baker-college.png'),
-  'Brown College': require('@/assets/images/brown-college.png'),
-  'Duncan College': require('@/assets/images/duncan-college.png'),
-  'Hanszen College': require('@/assets/images/hanszen-college.png'),
-  'Jones College': require('@/assets/images/jones-college.png'),
-  'Lovett College': require('@/assets/images/lovett-college.png'),
-  'Martel College': require('@/assets/images/martel-college.png'),
-  'McMurtry College': require('@/assets/images/murt-college.png'),
-  'Sid Richardson College': require('@/assets/images/sid-college.png'),
-  'Wiess College': require('@/assets/images/wiess-college.png'),
-  'Will Rice College': require('@/assets/images/wrc-college.png'),
-};
-
-const sections = [
-  {
-    title: 'Residential Colleges',
-    data: [
-      'Baker College', 'Brown College', 'Duncan College', 'Hanszen College',
-      'Jones College', 'Lovett College', 'Martel College', 'McMurtry College',
-      'Sid Richardson College', 'Wiess College', 'Will Rice College',
-    ],
-    type: 'college' as const,
-  },
-  {
-    title: 'Special Buildings',
-    data: [
-      'Baker Institute', 'George R. Brown Tennis Center',
-      'Ley Track & Holloway Field', 'Rice Stadium',
-      'Reckling Park', 'Tudor Fieldhouse',
-    ],
-    type: 'special' as const,
-  },
-];
+import { useRef, useEffect, useState } from 'react';
+import { supabase, getStorageUrl, BuildingRow } from '@/lib/supabase';
 
 export default function MapsPage() {
   const listRef = useRef<SectionList>(null);
+  const [buildings, setBuildings] = useState<BuildingRow[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    supabase
+      .from('buildings')
+      .select('*')
+      .order('sort_order')
+      .then(({ data }) => {
+        if (data) setBuildings(data);
+        setLoading(false);
+      });
+  }, []);
+
+  const colleges = buildings.filter((b) => b.type === 'college');
+  const specials = buildings.filter((b) => b.type === 'special');
+
+  const sections = [
+    { title: 'Residential Colleges', data: colleges, type: 'college' as const },
+    { title: 'Special Buildings', data: specials, type: 'special' as const },
+  ];
 
   const scrollToSection = (index: number) => {
     listRef.current?.scrollToLocation({
@@ -59,12 +46,20 @@ export default function MapsPage() {
     }
   };
 
+  if (loading) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={Colors.light.primary} />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <SectionList
         ref={listRef}
         sections={sections}
-        keyExtractor={(item) => item}
+        keyExtractor={(item) => String(item.id)}
         stickySectionHeadersEnabled={false}
         ListHeaderComponent={
           <View>
@@ -98,17 +93,17 @@ export default function MapsPage() {
         renderItem={({ item, section }) => (
           <TouchableOpacity
             style={styles.card}
-            onPress={() => handlePress(item, section.type)}
+            onPress={() => handlePress(item.name, section.type)}
             activeOpacity={0.7}
           >
-            {section.type === 'college' ? (
-              <Image source={COLLEGE_IMAGES[item]} style={styles.collegeImage} />
+            {section.type === 'college' && item.thumbnail_path ? (
+              <Image source={{ uri: getStorageUrl(item.thumbnail_path) }} style={styles.collegeImage} />
             ) : (
               <View style={styles.iconBox}>
                 <Ionicons name="business" size={20} color={Colors.light.primary} />
               </View>
             )}
-            <Text style={styles.cardName}>{item}</Text>
+            <Text style={styles.cardName}>{item.name}</Text>
             <Ionicons name="chevron-forward" size={18} color="#999" />
           </TouchableOpacity>
         )}

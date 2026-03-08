@@ -47,3 +47,17 @@ export interface ContactCategoryRow {
   sort_order: number;
   contacts: ContactRow[];
 }
+
+export interface BuildingRow {
+  id: number;
+  name: string;
+  type: 'college' | 'special';
+  thumbnail_path: string | null;
+  map_path: string | null;
+  description: string | null;
+  sort_order: number;
+}
+
+export function getStorageUrl(path: string): string {
+  return `${SUPABASE_URL}/storage/v1/object/public/maps/${path}`;
+}

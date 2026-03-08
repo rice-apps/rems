@@ -1,43 +1,42 @@
 import { Image } from 'expo-image';
-import { View, Text, TouchableOpacity, StyleSheet, FlatList } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, FlatList, ActivityIndicator } from 'react-native';
 import { router, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-
-const COLLEGE_IMAGES: Record<string, any> = {
-  'Baker College': require('@/assets/images/baker-college.png'),
-  'Brown College': require('@/assets/images/brown-college.png'),
-  'Duncan College': require('@/assets/images/duncan-college.png'),
-  'Hanszen College': require('@/assets/images/hanszen-college.png'),
-  'Jones College': require('@/assets/images/jones-college.png'),
-  'Lovett College': require('@/assets/images/lovett-college.png'),
-  'Martel College': require('@/assets/images/martel-college.png'),
-  'McMurtry College': require('@/assets/images/murt-college.png'),
-  'Sid Richardson College': require('@/assets/images/sid-college.png'),
-  'Wiess College': require('@/assets/images/wiess-college.png'),
-  'Will Rice College': require('@/assets/images/wrc-college.png'),
-};
-
-const colleges = [
-  { id: '7', name: 'Baker College' },
-  { id: '8', name: 'Brown College' },
-  { id: '9', name: 'Duncan College' },
-  { id: '10', name: 'Hanszen College' },
-  { id: '11', name: 'Jones College' },
-  { id: '12', name: 'Lovett College' },
-  { id: '13', name: 'Martel College' },
-  { id: '14', name: 'McMurtry College' },
-  { id: '15', name: 'Sid Richardson College' },
-  { id: '16', name: 'Wiess College' },
-  { id: '17', name: 'Will Rice College' },
-];
+import { useEffect, useState } from 'react';
+import { supabase, getStorageUrl, BuildingRow } from '@/lib/supabase';
+import { Colors } from '@/constants/theme';
 
 export default function CollegeListScreen() {
+  const [colleges, setColleges] = useState<BuildingRow[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    supabase
+      .from('buildings')
+      .select('*')
+      .eq('type', 'college')
+      .order('sort_order')
+      .then(({ data }) => {
+        if (data) setColleges(data);
+        setLoading(false);
+      });
+  }, []);
+
+  if (loading) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <Stack.Screen options={{ title: 'Residential Colleges' }} />
+        <ActivityIndicator size="large" color={Colors.light.primary} />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <Stack.Screen options={{ title: 'Residential Colleges' }} />
       <FlatList
         data={colleges}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => String(item.id)}
         contentContainerStyle={styles.list}
         renderItem={({ item }) => (
           <TouchableOpacity
@@ -50,7 +49,11 @@ export default function CollegeListScreen() {
             }
             activeOpacity={0.7}
           >
-            <Image source={COLLEGE_IMAGES[item.name]} style={styles.collegeImage} />
+            {item.thumbnail_path ? (
+              <Image source={{ uri: getStorageUrl(item.thumbnail_path) }} style={styles.collegeImage} />
+            ) : (
+              <View style={styles.collegeImage} />
+            )}
             <Text style={styles.collegeName}>{item.name}</Text>
             <Ionicons name="chevron-forward" size={18} color="#999" />
           </TouchableOpacity>

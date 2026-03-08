@@ -1,77 +1,54 @@
 import { Image } from 'expo-image';
-import { View, Text, ScrollView, StyleSheet, Modal, Pressable } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Modal, Pressable, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, Stack } from 'expo-router';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { supabase, getStorageUrl, BuildingRow } from '@/lib/supabase';
+import { Colors } from '@/constants/theme';
 
 export default function CollegeDetailScreen() {
   const { college } = useLocalSearchParams<{ college: string }>();
   const [zoomed, setZoomed] = useState(false);
+  const [building, setBuilding] = useState<BuildingRow | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const collegeData: Record<string, { image: any; footnote: string }> = {
-    'Baker College': {
-      image: require('@/assets/images/maps/baker-map.jpg'),
-      footnote: 'Buildings: 4\nElevators: 1\nNew Baker is the only building with an elevator',
-    },
-    'Brown College': {
-      image: require('@/assets/images/maps/brown-map.jpg'),
-      footnote: 'Buildings: 2 (connected)\nElevators: 2',
-    },
-    'Duncan College': {
-      image: require('@/assets/images/maps/duncan-map.jpg'),
-      footnote: 'Buildings: 1\nElevators: 1',
-    },
-    'Hanszen College': {
-      image: require('@/assets/images/maps/hanszen-map.jpg'),
-      footnote: "Buildings: 2\nElevators: 1\nParking for New Hanszen is tricky because it\u2019s in the middle of nowhere but inner loop is typically best",
-    },
-    'Jones College': {
-      image: require('@/assets/images/maps/jones-map.jpg'),
-      footnote: 'Buildings: 3 (connected)\nElevators: 2\nJones Commons is on the first floor of the central building',
-    },
-    'Lovett College': {
-      image: require('@/assets/images/maps/lovett-map.jpg'),
-      footnote: 'Buildings: 2\nElevators: 1\nThe primary "toaster" building has 6 floors, but only the first 5 are accessible by elevator\nThe Lovett basement is accessible by elevator and is under the "toaster" building\nThe Lovett elevator is not large enough to fit a stretcher, but can fit a stair chair',
-    },
-    'Martel College': {
-      image: require('@/assets/images/maps/martel-map.jpg'),
-      footnote: 'Buildings: 1\nElevators: 2\nMartel basement is accessible by elevator',
-    },
-    'McMurtry College': {
-      image: require('@/assets/images/maps/mcmurtry-map.jpg'),
-      footnote: 'Buildings: 1\nElevators: 1',
-    },
-    'Sid Richardson College': {
-      image: require('@/assets/images/maps/new-sid-map.jpg'),
-      footnote: 'Buildings: 1\nElevators: 2 (side by side)\nFloors 3-5 include an additional set of rooms (x26-44) that branch off from the main building\nThe New Sid storage room is located on the fourth floor (412)',
-    },
-    'Wiess College': {
-      image: require('@/assets/images/maps/wiess-map.jpg'),
-      footnote: 'Buildings: 1\nElevators: 1\nThe Hanszen/Wiess Commons complex has an elevator, but it does not connect to residential rooms',
-    },
-    'Will Rice College': {
-      image: require('@/assets/images/maps/will-rice-map.jpg'),
-      footnote: 'Buildings: 2\nElevators: 1\nNew Will Rice has one elevator near the college commons, but Old Will Rice does not have an elevator.',
-    },
-  };
+  useEffect(() => {
+    supabase
+      .from('buildings')
+      .select('*')
+      .eq('name', college)
+      .single()
+      .then(({ data }) => {
+        if (data) setBuilding(data);
+        setLoading(false);
+      });
+  }, [college]);
 
-  const data = collegeData[college];
-  const image = data?.image;
+  if (loading) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <Stack.Screen options={{ title: college }} />
+        <ActivityIndicator size="large" color={Colors.light.primary} />
+      </View>
+    );
+  }
+
+  const imageUri = building?.map_path ? getStorageUrl(building.map_path) : null;
 
   return (
     <View style={styles.container}>
       <Stack.Screen options={{ title: college }} />
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {image && (
+        {imageUri && (
           <Pressable onPress={() => setZoomed(true)}>
-            <Image source={image} style={styles.mapImage} contentFit="contain" />
+            <Image source={{ uri: imageUri }} style={styles.mapImage} contentFit="contain" />
             <Text style={styles.tapHint}>Tap to zoom</Text>
           </Pressable>
         )}
 
         <View style={styles.infoCard}>
           <Text style={styles.infoTitle}>Details</Text>
-          <Text style={styles.infoText}>{data?.footnote}</Text>
+          <Text style={styles.infoText}>{building?.description ?? 'No details available'}</Text>
         </View>
 
         <View style={styles.infoCard}>
@@ -87,7 +64,7 @@ export default function CollegeDetailScreen() {
 
       <Modal visible={zoomed} transparent animationType="fade" onRequestClose={() => setZoomed(false)}>
         <Pressable style={styles.zoomOverlay} onPress={() => setZoomed(false)}>
-          {image && <Image source={image} style={styles.zoomImage} contentFit="contain" />}
+          {imageUri && <Image source={{ uri: imageUri }} style={styles.zoomImage} contentFit="contain" />}
         </Pressable>
       </Modal>
     </View>
