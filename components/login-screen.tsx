@@ -7,7 +7,7 @@ import { supabase, isEmailAuthorized } from "@/lib/supabase";
 
 WebBrowser.maybeCompleteAuthSession();
 
-const redirectTo = makeRedirectUri();
+const redirectTo = makeRedirectUri({ path: "auth/callback" });
 
 export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
