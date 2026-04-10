@@ -34,6 +34,7 @@ export default function SearchScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [searchEngineReady, setSearchEngineReady] = useState(false);
   const [showResultsModal, setShowResultsModal] = useState(false);
+  const [searchCollapsed, setSearchCollapsed] = useState(false);
   const pdfRef = useRef<PdfRef>(null);
   const searchEngineRef = useRef<SemanticSearchEngine | null>(null);
   const pendingPageRef = useRef<number | null>(null);
@@ -116,6 +117,7 @@ export default function SearchScreen() {
     }
 
     setIsLoading(true);
+    setRecommendations([]);
 
     try {
       const semanticResults = await searchEngineRef.current.search(
@@ -145,12 +147,11 @@ export default function SearchScreen() {
   };
 
   const jumpToPage = (pageNumber: number) => {
-    // Close modal
     setShowResultsModal(false);
+    setSearchCollapsed(true);
+    setRecommendations([]);
 
-    // Force PDF to navigate to the page using ref
     if (pdfRef.current) {
-      // Small delay to ensure PDF is visible before navigation
       setTimeout(() => {
         pdfRef.current?.setPage(pageNumber);
       }, 100);
@@ -208,32 +209,47 @@ export default function SearchScreen() {
       {/* Search Bar */}
       <View style={styles.searchHeader}>
         <View style={styles.searchInputContainer}>
-          <View style={styles.searchInputWrapper}>
+          <TouchableOpacity
+            style={styles.searchInputWrapper}
+            activeOpacity={searchCollapsed ? 0.7 : 1}
+            onPress={searchCollapsed ? () => setSearchCollapsed(false) : undefined}
+          >
             <Ionicons
               name="search"
               size={20}
               color="#666"
               style={styles.searchIcon}
             />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search medical guidelines..."
-              placeholderTextColor="#999"
-              value={searchQuery}
-              onChangeText={(text) => {
-                setSearchQuery(text);
-                updateRecommendations(text);
-              }}
-              onSubmitEditing={handleSearchOrShowResults}
-              returnKeyType="search"
-            />
-          </View>
+            {searchCollapsed ? (
+              <Text style={styles.collapsedSearchText} numberOfLines={1}>
+                {searchQuery || "Search medical guidelines..."}
+              </Text>
+            ) : (
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search medical guidelines..."
+                placeholderTextColor="#999"
+                value={searchQuery}
+                onChangeText={(text) => {
+                  setSearchQuery(text);
+                  updateRecommendations(text);
+                }}
+                onSubmitEditing={handleSearchOrShowResults}
+                returnKeyType="search"
+              />
+            )}
+          </TouchableOpacity>
           <TouchableOpacity
             style={[
               styles.searchButton,
               !searchEngineReady && styles.searchButtonDisabled,
             ]}
-            onPress={handleSearchOrShowResults}
+            onPress={() => {
+              if (searchCollapsed) {
+                setSearchCollapsed(false);
+              }
+              handleSearchOrShowResults();
+            }}
             disabled={!searchEngineReady}
           >
             {isLoading ? (
@@ -246,7 +262,7 @@ export default function SearchScreen() {
           </TouchableOpacity>
         </View>
 
-        {!searchEngineReady && (
+        {!searchEngineReady && !searchCollapsed && (
           <View style={styles.initializingBanner}>
             <ActivityIndicator size="small" color="#1E40AF" />
             <Text style={styles.initializingText}>
@@ -256,34 +272,34 @@ export default function SearchScreen() {
         )}
       </View>
 
-      {/* Recommendations */}
-      {recommendations.length > 0 && (
-        <View style={styles.recommendationsContainer}>
-          <FlatList
-            data={recommendations}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={styles.recommendationItem}
-                onPress={() => {
-                  setSearchQuery(item.title || item.section);
-                  setRecommendations([]);
-                  handleSearchOrShowResults();
-                }}
-              >
-                <Text style={styles.recommendationText}>
-                  {item.title || item.section}
-                </Text>
-              </TouchableOpacity>
-            )}
-            keyExtractor={(item, index) => `rec-${index}`}
-            horizontal={false}
-            showsVerticalScrollIndicator={false}
-          />
-        </View>
-      )}
-
       {/* PDF Viewer */}
       <View style={styles.pdfView}>
+        {/* Recommendations dropdown overlay */}
+        {recommendations.length > 0 && !searchCollapsed && (
+          <View style={styles.recommendationsContainer}>
+            <FlatList
+              data={recommendations}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={styles.recommendationItem}
+                  onPress={() => {
+                    setRecommendations([]);
+                    setSearchCollapsed(true);
+                    jumpToPage(item.page);
+                  }}
+                >
+                  <Ionicons name="document-text-outline" size={16} color="#666" style={{ marginRight: 10 }} />
+                  <Text style={styles.recommendationText} numberOfLines={1}>
+                    {item.title || item.section}
+                  </Text>
+                </TouchableOpacity>
+              )}
+              keyExtractor={(item, index) => `rec-${index}`}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            />
+          </View>
+        )}
         <Pdf
           ref={pdfRef}
           source={source}
@@ -365,6 +381,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+  },
+  collapsedSearchText: {
+    flex: 1,
+    height: 48,
+    lineHeight: 48,
+    fontSize: 16,
+    color: "#333",
   },
   searchInputContainer: {
     flexDirection: "row",
@@ -537,18 +560,32 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   recommendationsContainer: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
     backgroundColor: "#fff",
-    maxHeight: 200,
-    borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
+    maxHeight: 240,
+    borderBottomLeftRadius: 12,
+    borderBottomRightRadius: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 5,
   },
   recommendationItem: {
-    padding: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 14,
+    paddingHorizontal: 16,
     borderBottomWidth: 1,
     borderBottomColor: "#f0f0f0",
   },
   recommendationText: {
-    fontSize: 16,
+    flex: 1,
+    fontSize: 15,
     color: "#333",
   },
 });
