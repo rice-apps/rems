@@ -9,7 +9,6 @@ import {
   ActivityIndicator,
   Platform,
   Modal,
-  Animated,
   Keyboard,
   Image,
   Alert,
@@ -45,25 +44,22 @@ export default function HomeScreen() {
   const avatarUrl: string | undefined = userMeta?.avatar_url || userMeta?.picture;
   const initial = firstName.charAt(0).toUpperCase();
 
-  const marginTopAnim = useRef(new Animated.Value(150)).current;
   const [searchQuery, setSearchQuery] = useState("");
-  const [lastSearchQuery, setLastSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
-  const [recommendations, setRecommendations] = useState<SearchResult[]>([]);
   const [bookmarks, setBookmarks] = useState<SearchResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [searchEngineReady, setSearchEngineReady] = useState(false);
-  const [showResultsModal, setShowResultsModal] = useState(true);
-  const [isFocused, setIsFocused] = useState(false);
-  const searchEngineRef = useRef<SemanticSearchEngine | null>(null);
-  const router = useRouter();
   const [showSearchModal, setShowSearchModal] = useState(false);
+  const searchEngineRef = useRef<SemanticSearchEngine | null>(null);
+  const searchInputRef = useRef<TextInput>(null);
+  const router = useRouter();
 
-  // Account modal state
   const [showAccountModal, setShowAccountModal] = useState(false);
   const [phone, setPhone] = useState(userMeta?.phone || "");
   const [savingPhone, setSavingPhone] = useState(false);
   const [userClearances, setUserClearances] = useState<string[]>([]);
+
+  const hasQuery = searchQuery.trim().length > 0;
 
   useEffect(() => {
     const fetchClearance = async () => {
@@ -108,23 +104,6 @@ export default function HomeScreen() {
 
   const titlePageData: { title: string; page_number: number; bookmark_id: string }[] =
     require("../../assets/dbindex/title_page.json");
-
-  const sortedTitlePageData = [...titlePageData].sort((a, b) => a.page_number - b.page_number);
-
-  const renderBookmark = ({ item }: { item: typeof sortedTitlePageData[0] }) => (
-    <View>
-      <Text style={styles.resultTitle}>{item.title}</Text>
-      <Text>Page {item.page_number}</Text>
-    </View>
-  );
-
-  useEffect(() => {
-    Animated.timing(marginTopAnim, {
-      toValue: isFocused ? (Platform.OS === "ios" ? 50 : 20) : 150,
-      duration: 300,
-      useNativeDriver: false,
-    }).start();
-  }, [isFocused]);
 
   useEffect(() => {
     const initializeSearchEngine = async () => {
@@ -181,9 +160,6 @@ export default function HomeScreen() {
       );
 
       setSearchResults(formattedResults);
-      setRecommendations(formattedResults);
-      setLastSearchQuery(searchQuery.trim());
-      setShowResultsModal(true);
     } catch (error) {
       console.error("Search error:", error);
       setSearchResults([]);
@@ -192,10 +168,19 @@ export default function HomeScreen() {
     }
   };
 
-  const jumpToPage = (pageNumber: number) => {
+  const closeSearchModal = () => {
+    Keyboard.dismiss();
+    setShowSearchModal(false);
     setSearchQuery("");
     setSearchResults(bookmarks);
-    setRecommendations([]);
+  };
+
+  const openSearchModal = () => {
+    setShowSearchModal(true);
+  };
+
+  const jumpToPage = (pageNumber: number) => {
+    closeSearchModal();
     router.replace({
       pathname: "/(tabs)/Search",
       params: {
@@ -205,17 +190,19 @@ export default function HomeScreen() {
     });
   };
 
-  const renderSearchResult = ({ item }: { item: SearchResult }) => {
-    const isEmptySearch = !searchQuery.trim();
+  const handleCategoryPress = (query: string) => {
+    setSearchQuery(query);
+    setShowSearchModal(true);
+    updateRecommendations(query);
+  };
 
-    if (isEmptySearch) {
+  const renderSearchResult = ({ item }: { item: SearchResult }) => {
+    if (!hasQuery) {
       return (
         <TouchableOpacity
           style={styles.bookmarkCard}
-          onPress={() => {
-            setShowSearchModal(false);
-            jumpToPage(item.page);
-          }}
+          onPress={() => jumpToPage(item.page)}
+          activeOpacity={0.7}
         >
           <Text style={styles.bookmarkTitle} numberOfLines={1}>
             {item.title || item.section}
@@ -228,10 +215,7 @@ export default function HomeScreen() {
     return (
       <TouchableOpacity
         style={styles.resultCard}
-        onPress={() => {
-          setShowSearchModal(false);
-          jumpToPage(item.page);
-        }}
+        onPress={() => jumpToPage(item.page)}
         activeOpacity={0.7}
       >
         <View style={styles.resultCardTop}>
@@ -249,12 +233,6 @@ export default function HomeScreen() {
         </View>
       </TouchableOpacity>
     );
-  };
-
-  const handleCategoryPress = (query: string) => {
-    setSearchQuery(query);
-    setShowSearchModal(true);
-    updateRecommendations(query);
   };
 
   return (
@@ -276,10 +254,11 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Search Bar Button */}
+      {/* Search Bar Button (opens modal) */}
       <TouchableOpacity
         style={styles.searchBarButton}
-        onPress={() => setShowSearchModal(true)}
+        onPress={openSearchModal}
+        activeOpacity={0.8}
       >
         <View style={styles.searchBarLogo}>
           <Text style={styles.searchBarLogoText}>R</Text>
@@ -289,7 +268,7 @@ export default function HomeScreen() {
 
       {/* Quick Search Categories */}
       <View style={styles.categoriesSection}>
-        <Text style={styles.categoriesTitle}>Quick Search</Text>
+        <Text style={styles.sectionLabel}>Quick Search</Text>
         <View style={styles.chipsList}>
           {CATEGORIES.map((cat) => (
             <TouchableOpacity
@@ -320,85 +299,95 @@ export default function HomeScreen() {
       <Modal
         visible={showSearchModal}
         animationType="slide"
-        onRequestClose={() => setShowSearchModal(false)}
+        onRequestClose={closeSearchModal}
         transparent={false}
+        onShow={() => {
+          setTimeout(() => searchInputRef.current?.focus(), 50);
+        }}
       >
-        <View style={{ flex: 1, backgroundColor: "#fff" }}>
-          <View style={styles.searchHeader}>
-            <View style={styles.searchInputContainer}>
-              <TouchableOpacity
-                onPress={() => {
-                  Keyboard.dismiss();
-                  setIsFocused(false);
-                  setShowSearchModal(false);
-                  setSearchQuery("");
-                  setSearchResults(bookmarks);
-                  setRecommendations([]);
+        <View style={styles.searchModal}>
+          <View style={styles.searchModalHeader}>
+            <TouchableOpacity
+              onPress={closeSearchModal}
+              style={styles.searchBackButton}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="chevron-back" size={22} color="#fff" />
+            </TouchableOpacity>
+
+            <View style={styles.searchInputWrapper}>
+              <Ionicons
+                name="search"
+                size={20}
+                color="#666"
+                style={{ marginRight: 8 }}
+              />
+              <TextInput
+                ref={searchInputRef}
+                style={styles.searchInput}
+                placeholder="Search medical guidelines..."
+                placeholderTextColor="#999"
+                value={searchQuery}
+                onChangeText={(text) => {
+                  setSearchQuery(text);
+                  updateRecommendations(text);
                 }}
-                style={styles.backButton}
-              >
-                <Text style={styles.backButtonText}>Back</Text>
-              </TouchableOpacity>
-
-              <View style={styles.searchInputWrapper}>
-                <Ionicons
-                  name="search"
-                  size={20}
-                  color="#666"
-                  style={styles.searchIcon}
-                />
-                <TextInput
-                  style={styles.searchInput}
-                  placeholder="Search medical guidelines..."
-                  placeholderTextColor="#999"
-                  value={searchQuery}
-                  onChangeText={(text) => {
-                    setSearchQuery(text);
-                    updateRecommendations(text);
+                returnKeyType="search"
+                blurOnSubmit
+              />
+              {hasQuery && (
+                <TouchableOpacity
+                  onPress={() => {
+                    setSearchQuery("");
+                    setSearchResults(bookmarks);
+                    searchInputRef.current?.focus();
                   }}
-                  onFocus={() => setIsFocused(true)}
-                  onBlur={() => setIsFocused(false)}
-                  onSubmitEditing={() => setIsFocused(false)}
-                  returnKeyType="search"
-                  blurOnSubmit={true}
-                  autoFocus={true}
+                  hitSlop={8}
+                >
+                  <Ionicons name="close-circle" size={20} color="#999" />
+                </TouchableOpacity>
+              )}
+              {isLoading && (
+                <ActivityIndicator
+                  size="small"
+                  color={Colors.light.primary}
+                  style={{ marginLeft: 8 }}
                 />
-              </View>
+              )}
             </View>
+          </View>
 
-            {!searchEngineReady && (
-              <View style={styles.initializingBanner}>
-                <ActivityIndicator size="small" color="#1E40AF" />
-                <Text style={styles.initializingText}>
-                  Initializing search engine...
+          {!searchEngineReady && (
+            <View style={styles.initializingBanner}>
+              <ActivityIndicator size="small" color="#1E40AF" />
+              <Text style={styles.initializingText}>
+                Initializing search engine...
+              </Text>
+            </View>
+          )}
+
+          <View style={styles.resultsSection}>
+            <Text style={styles.sectionLabel}>
+              {hasQuery ? `Results for "${searchQuery.trim()}"` : "Browse Guidelines"}
+            </Text>
+            {searchResults.length > 0 ? (
+              <FlatList
+                data={searchResults}
+                renderItem={renderSearchResult}
+                keyExtractor={(item, index) => `${item.page}-${index}`}
+                contentContainerStyle={styles.resultsList}
+                keyboardShouldPersistTaps="handled"
+                keyboardDismissMode="on-drag"
+                showsVerticalScrollIndicator
+              />
+            ) : (
+              <View style={styles.emptyResults}>
+                <Text style={styles.emptyResultsText}>
+                  {hasQuery ? "No matches found." : "No guidelines available."}
                 </Text>
               </View>
             )}
           </View>
-
-          {showResultsModal && (
-            <View style={styles.modalContainer}>
-              <View style={styles.resultsView}>
-                {searchResults.length > 0 ? (
-                  <FlatList
-                    data={searchResults}
-                    renderItem={renderSearchResult}
-                    keyExtractor={(item, index) => `${item.page}-${index}`}
-                    contentContainerStyle={styles.resultsList}
-                    showsVerticalScrollIndicator={true}
-                  />
-                ) : (
-                  <FlatList
-                    data={sortedTitlePageData}
-                    renderItem={renderBookmark}
-                    keyExtractor={(item, index) => `bookmark-${item.bookmark_id}-${index}`}
-                    contentContainerStyle={styles.resultsList}
-                    showsVerticalScrollIndicator
-                  />
-                )}
-              </View>
-            </View>
-          )}
         </View>
       </Modal>
 
@@ -419,7 +408,6 @@ export default function HomeScreen() {
           </View>
 
           <View style={styles.accountBody}>
-            {/* Avatar + name */}
             <View style={styles.accountProfile}>
               {avatarUrl ? (
                 <Image source={{ uri: avatarUrl }} style={styles.accountAvatar} />
@@ -441,7 +429,6 @@ export default function HomeScreen() {
               )}
             </View>
 
-            {/* Phone field */}
             <View style={styles.accountField}>
               <Text style={styles.accountFieldLabel}>Phone Number</Text>
               <TextInput
@@ -463,7 +450,6 @@ export default function HomeScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* Logout */}
             <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
               <Ionicons name="log-out-outline" size={20} color="#DC2626" />
               <Text style={styles.logoutText}>Log Out</Text>
@@ -481,7 +467,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#f8f9fa",
   },
 
-  // Header
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -520,7 +505,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
-  // Search bar
   searchBarButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -550,16 +534,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
 
-  // Categories
   categoriesSection: {
     marginTop: 28,
     paddingHorizontal: 20,
   },
-  categoriesTitle: {
-    fontSize: 18,
+  sectionLabel: {
+    fontSize: 14,
     fontWeight: "700",
-    color: "#333",
-    marginBottom: 12,
+    color: "#666",
+    textTransform: "uppercase",
+    letterSpacing: 0.6,
+    marginBottom: 10,
   },
   chipsList: {
     gap: 10,
@@ -583,17 +568,28 @@ const styles = StyleSheet.create({
     color: Colors.light.primary,
   },
 
-  // Search modal
-  searchHeader: {
-    marginTop: 20,
-    backgroundColor: "#FFFFFF",
-    paddingTop: 40,
-    paddingHorizontal: 16,
-    paddingBottom: 8,
+  searchModal: {
+    flex: 1,
+    backgroundColor: "#fff",
   },
-  searchInputContainer: {
+  searchModalHeader: {
     flexDirection: "row",
     alignItems: "center",
+    paddingHorizontal: 16,
+    paddingTop: Platform.OS === "ios" ? 60 : 40,
+    paddingBottom: 12,
+    backgroundColor: "#fff",
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
+  },
+  searchBackButton: {
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#1E3A8A",
+    borderRadius: 10,
+    width: 40,
+    height: 40,
+    marginRight: 10,
   },
   searchInputWrapper: {
     flex: 1,
@@ -602,35 +598,25 @@ const styles = StyleSheet.create({
     backgroundColor: "#f5f5f5",
     borderRadius: 12,
     paddingHorizontal: 12,
-    marginRight: 8,
+    height: 44,
     borderWidth: 1,
     borderColor: "#e0e0e0",
   },
-  searchIcon: {
-    marginRight: 8,
-  },
   searchInput: {
     flex: 1,
-    height: 48,
     fontSize: 16,
-    backgroundColor: "transparent",
+    color: "#333",
+    padding: 0,
   },
-  backButton: {
-    padding: 8,
-    paddingRight: 12,
-  },
-  backButtonText: {
-    fontSize: 20,
-    color: "#1E40AF",
-    fontWeight: "600",
-  },
+
   initializingBanner: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#fff3cd",
     padding: 8,
     borderRadius: 8,
-    marginTop: 8,
+    marginHorizontal: 20,
+    marginTop: 10,
   },
   initializingText: {
     marginLeft: 8,
@@ -638,17 +624,13 @@ const styles = StyleSheet.create({
     color: "#856404",
   },
 
-  // Results
-  modalContainer: {
+  resultsSection: {
     flex: 1,
-    backgroundColor: "#fff",
-  },
-  resultsView: {
-    flex: 1,
-    backgroundColor: "#fff",
+    marginTop: 16,
+    paddingHorizontal: 20,
   },
   resultsList: {
-    padding: 16,
+    paddingBottom: 24,
   },
   resultCard: {
     backgroundColor: "#fff",
@@ -691,9 +673,9 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     backgroundColor: "#fff",
-    padding: 12,
+    padding: 14,
     marginBottom: 8,
-    borderRadius: 8,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: "#e0e0e0",
   },
@@ -709,8 +691,20 @@ const styles = StyleSheet.create({
     color: "#1E40AF",
     fontWeight: "500",
   },
+  emptyResults: {
+    paddingVertical: 40,
+    alignItems: "center",
+  },
+  emptyResultsText: {
+    fontSize: 15,
+    color: "#888",
+  },
 
-  // Account modal
+  backButtonText: {
+    fontSize: 16,
+    color: "#1E40AF",
+    fontWeight: "600",
+  },
   accountModal: {
     flex: 1,
     backgroundColor: "#f8f9fa",

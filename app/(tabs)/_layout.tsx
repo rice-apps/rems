@@ -1,5 +1,5 @@
-import { Tabs } from 'expo-router';
-import React from 'react';
+import { Tabs, useRouter } from 'expo-router';
+import React, { useRef } from 'react';
 import { View, StyleSheet } from 'react-native';
 
 import { HapticTab } from '@/components/haptic-tab';
@@ -7,9 +7,13 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
+const DOUBLE_TAP_MS = 350;
+
 export default function TabLayout() {
   const rawColorScheme = useColorScheme();
   const colorScheme = (rawColorScheme ?? 'light') as 'light' | 'dark';
+  const router = useRouter();
+  const lastSearchPressRef = useRef(0);
 
   return (
     <Tabs
@@ -45,6 +49,20 @@ export default function TabLayout() {
             </View>
           ),
           tabBarButton: (props) => <HapticTab {...props} />,
+        }}
+        listeners={{
+          tabPress: () => {
+            const now = Date.now();
+            if (now - lastSearchPressRef.current < DOUBLE_TAP_MS) {
+              router.replace({
+                pathname: '/(tabs)/Search',
+                params: { page: '1', nonce: now.toString() },
+              });
+              lastSearchPressRef.current = 0;
+              return;
+            }
+            lastSearchPressRef.current = now;
+          },
         }}
       />
       <Tabs.Screen
